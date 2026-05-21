@@ -2,15 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<script>
-// Limpia el service worker y la caché de la versión PWA anterior para no servir contenido viejo.
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); });
-}
-if (window.caches && caches.keys) {
-  caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); });
-}
-</script>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -915,6 +908,21 @@ if (window.caches && caches.keys) {
     }
     if(document.readyState==='complete')hide();else window.addEventListener('load',hide);
   })();
+  </script>
+  <script>
+  // Registro del service worker (PWA). Se actualiza solo: cuando toma control
+  // una versión nueva, recarga una vez para aplicarla.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js');
+    });
+    var swRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (swRefreshing) return;
+      swRefreshing = true;
+      window.location.reload();
+    });
+  }
   </script>
 </body>
 </html>
