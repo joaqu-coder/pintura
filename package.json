@@ -1,0 +1,9 @@
+{
+  "name": "antigravity-presupuestos",
+  "version": "2.0.0",
+  "description": "Sistema de presupuestos para obra y pintura",
+  "scripts": {
+    "start": "npx serve . --listen 3000 --no-clipboard",
+    "dev":   "npx serve . --listen 3000"
+  }
+}

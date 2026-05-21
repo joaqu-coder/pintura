@@ -1,52 +1,100 @@
-# La Chamba Verde — Pintura 🎨
+# Antigravity — Presupuestos
+## Cómo trabajar en la PC
 
-Calculadora de presupuestos de pintura profesional. Funciona como **PWA** (se puede instalar en el celular como app).
+---
 
-## Archivos
+### Primera vez (solo una vez)
+
+Abrí el símbolo del sistema o PowerShell **en la carpeta del proyecto** y ejecutá:
 
 ```
-la-chamba-verde/
-├── index.html       ← app completa
-├── manifest.json    ← config PWA
-├── sw.js            ← service worker (offline)
-├── icon-192.png     ← ícono app
-└── icon-512.png     ← ícono splash
+npm start
 ```
 
-## Cómo subir a GitHub Pages (paso a paso)
+Si dice que `npx` no está instalado, primero instalá Node.js desde https://nodejs.org  
+(versión LTS, el instalador incluye npm automáticamente).
 
-### 1. Crear cuenta en GitHub
-- Entrá a [github.com](https://github.com) → **Sign up**
-- Elegí un nombre de usuario (ej: `lachambaverde`)
+---
 
-### 2. Crear repositorio
-- Click en **New repository** (botón verde)
-- Nombre: `pintura` (o el que quieras)
-- Dejá en **Public**
-- Tildá **Add a README file**
-- Click **Create repository**
+### Todos los días
 
-### 3. Subir los archivos
-- Dentro del repositorio, click en **Add file → Upload files**
-- Arrastrá estos 5 archivos: `index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`
-- Click **Commit changes**
+1. Abrí **VS Code** en la carpeta del proyecto
+2. Abrí la terminal integrada: `Ctrl + Ñ` o menú Terminal → Nueva terminal
+3. Escribí:
 
-### 4. Activar GitHub Pages
-- Ir a **Settings** (arriba a la derecha del repo)
-- Menú izquierdo → **Pages**
-- En *Source* elegí **Deploy from a branch**
-- Branch: **main** / folder: **/ (root)**
-- Click **Save**
-
-### 5. ¡Listo!
-En 1-2 minutos tu app va a estar en:
 ```
-https://TU-USUARIO.github.io/pintura/
+npm start
 ```
 
-## Instalar como app en el celular
-1. Abrí la URL en Chrome (Android) o Safari (iPhone)
-2. Android: menú ⋮ → **Agregar a pantalla de inicio**
-3. iPhone: compartir 📤 → **Agregar a pantalla de inicio**
+4. Abrí el navegador en: **http://localhost:3000**
+5. Listo. La app funciona completa.
 
-La app funciona **sin internet** después de la primera visita.
+---
+
+### Estructura de archivos
+
+```
+/
+├── index.html                  ← HTML principal (no tocar)
+├── package.json                ← Configuración del proyecto
+├── service-worker.js           ← PWA offline
+├── manifest.json               ← Instalable en celular
+│
+└── assets/
+    ├── css/
+    │   └── styles.css          ← Todos los estilos
+    │
+    └── js/
+        ├── app.js              ← Punto de entrada (ES6)
+        ├── app.legacy.js       ← Lógica original (no tocar)
+        ├── ui.js               ← Helpers de DOM
+        ├── storage.js          ← Guardado (IndexedDB)
+        ├── router.js           ← Navegación entre pantallas
+        │
+        ├── models/
+        │   ├── Item.js
+        │   ├── Presupuesto.js
+        │   ├── PresupuestoJornales.js
+        │   └── Empresa.js
+        │
+        ├── services/
+        │   ├── CalculoService.js       ← Motor de cálculo
+        │   ├── PresupuestoService.js   ← Historial
+        │   ├── WhatsappService.js      ← Mensajes WA
+        │   └── PdfService.js          ← Vista PDF
+        │
+        ├── components/
+        │   ├── AmbienteCard.js         ← Tarjetas de ambiente
+        │   ├── CarpinteriaPanel.js     ← Carpintería + materiales
+        │   └── CostosPanel.js         ← Costos extra
+        │
+        └── pages/
+            ├── presupuestos.js         ← Módulo Pintura
+            ├── jornales.js            ← Módulo Jornales
+            ├── historial.js           ← Historial
+            └── configuracion.js       ← Config global
+```
+
+---
+
+### Dónde modificar cada cosa
+
+| Quiero cambiar...              | Archivo                              |
+|-------------------------------|--------------------------------------|
+| Colores, tipografía, layout   | `assets/css/styles.css`              |
+| Cálculo de impuestos          | `assets/js/services/CalculoService.js` |
+| Texto del mensaje de WhatsApp | `assets/js/services/WhatsappService.js` |
+| Diseño del PDF                | `assets/js/services/PdfService.js`   |
+| Configuración (jornales, ART) | `assets/js/pages/configuracion.js`   |
+| Formulario de Jornales PJ     | `assets/js/pages/jornales.js`        |
+| Guardado / historial          | `assets/js/storage.js`               |
+| Navegación entre pantallas    | `assets/js/router.js`                |
+| HTML de las pantallas         | `index.html`                         |
+
+---
+
+### Regla clave
+
+`app.legacy.js` **no se toca**. Contiene las funciones que el HTML
+todavía necesita (render de costos, modal de cotización, etc.).
+Cuando una función se migre a un módulo nuevo, se elimina del legacy.

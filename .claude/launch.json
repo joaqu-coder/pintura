@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "antigravity-presupuestos",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "antigravity-v2",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "C:\\Users\\Joaquin\\Documents\\6.PROGRMACION\\JavaScript_Cotizador_2", "--listen", "3000", "--no-clipboard"],
+      "port": 3000
+    },
+    {
+      "name": "sistema-guemes",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "-d", "C:\\Users\\Joaquin\\Documents\\6.PROGRMACION\\sistema-guemes", "8123"],
+      "port": 8123
+    }
+  ]
+}
