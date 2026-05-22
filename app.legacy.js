@@ -1426,7 +1426,26 @@ function histAbrir(id){
 }
 
 // ── PANTALLA DE INICIO (saludo dinámico + tarjetas de info) ──
-function renderHome(){ renderHomeGreeting(); renderHomeInsights(); }
+function renderHome(){ renderHomeGreeting(); renderHomeInsights(); renderHomeRecent(); }
+
+function renderHomeRecent(){
+  const list=document.getElementById('home-recent-list'); if(!list) return;
+  const lista=(typeof histGetAll==='function')?histGetAll():[];
+  if(lista.length===0){
+    list.innerHTML='<div class="recent-empty">Todavía no guardaste presupuestos.<br>Cuando guardes uno, va a aparecer acá para reabrirlo al instante.</div>';
+    return;
+  }
+  list.innerHTML=lista.slice(0,4).map(it=>{
+    const total=it.total?fmtm(it.total):'—';
+    return `<div class="recent-item" onclick="histAbrir(${it.id})">
+      <div class="recent-item-main">
+        <div class="recent-item-name">${it.nombre||'Presupuesto'}</div>
+        <div class="recent-item-date">${it.fecha||''}</div>
+      </div>
+      <div class="recent-item-total">${total}</div>
+    </div>`;
+  }).join('');
+}
 
 function renderHomeGreeting(){
   const el=document.getElementById('home-greeting'); if(!el) return;
