@@ -121,11 +121,12 @@ function entrarModulo(modulo){
   showSectionNav(true);
 
   if(modulo==='pintura'){
-    ['tab-s-medicion','tab-s-cuadrilla','tab-s-costos','tab-s-precio'].forEach(id=>{
+    // Barra inferior: solo Cuadrilla · Costos · Precio (Medición es parte del flujo de entrada, no una pestaña)
+    ['tab-s-cuadrilla','tab-s-costos','tab-s-precio'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='';
     });
-    // Ocultar "Obra" (Tipo de Obra es la pantalla de entrada) y secciones de otros módulos
-    ['tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id=>{
+    // Ocultar "Medición" y "Obra" de la barra, y secciones de otros módulos
+    ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     // FAB modo cotización
@@ -1385,9 +1386,9 @@ function renderHistLista(){
     const ver = item.version ? ` v${item.version}` : '';
     return`<div class="hist-item">
       <div class="hist-item-top">
-        <div class="hist-item-name">${item.nombre}${ver}</div>
+        <div class="hist-item-name" onclick="histAbrir(${item.id})" style="cursor:pointer" title="Abrir para seguir trabajando">${item.nombre}${ver}</div>
         <div class="hist-item-actions">
-          <button class="btn-hist-edit"  onclick="openEdit(${item.id})">Editar</button>
+          <button class="btn-hist-edit"  onclick="histAbrir(${item.id})">Abrir</button>
           <button class="btn-hist-print" onclick="openPdfFromHist(${item.id})">PDF</button>
           <button class="btn-hist-wa"    onclick="enviarWhatsApp(${item.id})">WA</button>
           <button class="btn-hist-exp"   onclick="histExportar(${item.id})">JSON</button>
@@ -1405,6 +1406,23 @@ function renderHistLista(){
 }
 
 function openHist(){renderHistLista();document.getElementById('hist-overlay').classList.add('open');}
+
+// Abrir un presupuesto guardado: lo carga en la app y entra al módulo para seguir trabajando.
+function histAbrir(id){
+  const lista=histGetAll();
+  const item=lista.find(i=>i.id===id);
+  if(!item){return;}
+  if(!item.estado){alert('Este presupuesto no tiene datos para cargar.');return;}
+  closeHist();
+  if(item.tipoObra==='jornales-ppto'){
+    entrarSubmodulo('jornales-ppto');
+    histRestaurarEstado(item.estado);
+    if(typeof pjCalc==='function') pjCalc();
+  } else {
+    entrarModulo('pintura');
+    histRestaurarEstado(item.estado);
+  }
+}
 function closeHist(){document.getElementById('hist-overlay').classList.remove('open');}
 function closeHistOut(e){if(e.target===document.getElementById('hist-overlay'))closeHist();}
 

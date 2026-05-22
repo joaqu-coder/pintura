@@ -52,16 +52,6 @@
         <div class="home-card-arrow">›</div>
       </div>
 
-      <!-- OBRA -->
-      <div class="home-card hc-obra" onclick="entrarModulo('obra')">
-        <div class="home-icon">O</div>
-        <div class="home-card-text">
-          <div class="home-card-title">Obra</div>
-          <div class="home-card-desc">Cuadrilla · Costos · Precio · Historial</div>
-        </div>
-        <div class="home-card-arrow">›</div>
-      </div>
-
       <!-- DESMALEZADO -->
       <div class="home-card hc-desmalezado">
         <div class="home-icon">D</div>
@@ -82,34 +72,14 @@
 
 <!-- ══ SCREEN 1 — OBRA ══ -->
 <div class="screen" id="s-obra">
+  <!-- DATOS DEL CLIENTE (arriba de todo) -->
   <div class="card">
-    <div class="card-head" style="cursor:default;border-bottom:1px solid var(--border)">
-      <div class="card-num">1</div>
-      <span class="card-title">Tipo de Obra</span>
-    </div>
-    <div class="card-body">
-      <div class="obra-grid">
-        <div class="obra-btn" id="btn-casa" onclick="selectObra('casa')">
-          <div class="ol">Casa</div>
-          <div class="od">Vivienda particular</div>
-        </div>
-        <div class="obra-btn" id="btn-edificio" onclick="selectObra('edificio')">
-          <div class="ol">Edificio</div>
-          <div class="od">PH / Escalera</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- DATOS DEL CLIENTE -->
-  <div class="card">
-    <div class="card-head" onclick="toggleCard(this)">
+    <div class="card-head open" onclick="toggleCard(this)">
       <div class="card-num" style="background:var(--text-tertiary)">C</div>
       <span class="card-title">Datos del Cliente</span>
-      <span class="card-chevron">▾</span>
+      <span class="card-chevron open">▾</span>
     </div>
-    <div class="card-body collapsed">
+    <div class="card-body">
       <div class="fg">
         <label>Cliente / Razón social</label>
         <input type="text" id="cli-nombre" placeholder="Ej: García, Juan" oninput="syncCliente()">
@@ -126,6 +96,22 @@
         <div class="fg">
           <label>N° Presupuesto</label>
           <input type="text" id="cli-nro" placeholder="Ej: 0042" oninput="syncCliente()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASA / EDIFICIO (despliegue directo, sin título "Tipo de Obra") -->
+  <div class="card">
+    <div class="card-body">
+      <div class="obra-grid">
+        <div class="obra-btn" id="btn-casa" onclick="selectObra('casa')">
+          <div class="ol">Casa</div>
+          <div class="od">Vivienda particular</div>
+        </div>
+        <div class="obra-btn" id="btn-edificio" onclick="selectObra('edificio')">
+          <div class="ol">Edificio</div>
+          <div class="od">PH / Escalera</div>
         </div>
       </div>
     </div>
@@ -807,10 +793,6 @@
   <button class="module-tab" data-mod="pintura" onclick="entrarModulo('pintura')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13v5H4z"/><path d="M17 6h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-7"/><path d="M11 12v3"/><rect x="9" y="15" width="4" height="5" rx="1"/></svg>
     <span>Pintura</span>
-  </button>
-  <button class="module-tab" data-mod="obra" onclick="entrarModulo('obra')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h2M13 9h2M9 13h2M13 13h2M9 17h2M13 17h2"/></svg>
-    <span>Obra</span>
   </button>
   <button class="module-tab" data-mod="desmalezado" onclick="moduloProximamente()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V11"/><path d="M12 11C12 7 9 4 5 4c0 4 3 7 7 7Z"/><path d="M12 13c0-3 3-6 7-6 0 4-3 6-7 6Z"/></svg>
