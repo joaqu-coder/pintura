@@ -112,6 +112,7 @@ function goHome(){
   showSectionNav(false);
   const hb=document.getElementById('nav-hist-btn');if(hb)hb.style.display='none';
   const fab=document.getElementById('fab-btn');if(fab)fab.style.display='none';
+  if(typeof renderHome==='function') renderHome();
 }
 
 function entrarModulo(modulo){
@@ -1423,6 +1424,46 @@ function histAbrir(id){
     histRestaurarEstado(item.estado);
   }
 }
+
+// ── PANTALLA DE INICIO (saludo dinámico + tarjetas de info) ──
+function renderHome(){ renderHomeGreeting(); renderHomeInsights(); }
+
+function renderHomeGreeting(){
+  const el=document.getElementById('home-greeting'); if(!el) return;
+  const h=new Date().getHours();
+  let saludo, emoji;
+  if(h>=6 && h<13){ saludo='Buen día'; emoji='☀️'; }
+  else if(h>=13 && h<20){ saludo='Buenas tardes'; emoji='⛅'; }
+  else { saludo='Buenas noches'; emoji='🌙'; }
+  el.textContent='¡'+saludo+', Joaquín! '+emoji;
+}
+
+let _ultimaCotId=null;
+function renderHomeInsights(){
+  const lista=(typeof histGetAll==='function')?histGetAll():[];
+  // Presupuestos este mes (item.id es un timestamp Date.now())
+  const now=new Date(), mes=now.getMonth(), anio=now.getFullYear();
+  let count=0;
+  lista.forEach(it=>{
+    const ts=Number(it.id);
+    if(!isNaN(ts)){ const d=new Date(ts); if(d.getMonth()===mes && d.getFullYear()===anio) count++; }
+  });
+  const mesEl=document.getElementById('insight-mes'); if(mesEl) mesEl.textContent=count;
+  // Última cotización (lista[0] = más reciente por unshift)
+  const ult=lista[0]||null;
+  _ultimaCotId = ult?ult.id:null;
+  const nameEl=document.getElementById('insight-last-name');
+  const amtEl=document.getElementById('insight-last-amount');
+  if(ult){
+    if(nameEl) nameEl.textContent=ult.nombre||'Presupuesto';
+    if(amtEl) amtEl.textContent=ult.total?fmtm(ult.total):'';
+  } else {
+    if(nameEl) nameEl.textContent='—';
+    if(amtEl) amtEl.textContent='Sin presupuestos aún';
+  }
+}
+
+function abrirUltimaCotizacion(){ if(_ultimaCotId!=null) histAbrir(_ultimaCotId); }
 function closeHist(){document.getElementById('hist-overlay').classList.remove('open');}
 function closeHistOut(e){if(e.target===document.getElementById('hist-overlay'))closeHist();}
 
@@ -2728,4 +2769,5 @@ document.addEventListener('DOMContentLoaded',()=>{
   jRender();
   // Iniciar en pantalla Home
   const fab=document.getElementById('fab-btn');if(fab)fab.style.display='none';
+  renderHome();
 });

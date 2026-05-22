@@ -38,8 +38,28 @@
 <!-- ══ SCREEN HOME ══ -->
 <div class="screen active" id="s-home">
   <div class="home-screen">
-    <div class="home-logo">Joaqu<span class="logo-diaeresis">ï</span>n</div>
-    <div class="home-sub">Sistema de Presupuestos</div>
+
+    <!-- Saludo dinámico -->
+    <div class="home-hero">
+      <div class="home-greeting" id="home-greeting">Hola, Joaquín</div>
+      <div class="home-greeting-sub">¿Qué presupuesto vamos a armar hoy?</div>
+    </div>
+
+    <!-- Tarjetas de info -->
+    <div class="home-insights">
+      <div class="insight-card">
+        <div class="insight-label">Presupuestos este mes</div>
+        <div class="insight-value" id="insight-mes">0</div>
+      </div>
+      <div class="insight-card insight-last" id="insight-last" onclick="abrirUltimaCotizacion()">
+        <div class="insight-label">Última cotización</div>
+        <div class="insight-value" id="insight-last-name">—</div>
+        <div class="insight-meta" id="insight-last-amount">Sin presupuestos aún</div>
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="home-actions-label">Servicios</div>
     <div class="home-grid">
 
       <!-- PINTURA -->

@@ -454,3 +454,18 @@ input[type=time]::-webkit-calendar-picker-indicator,input[type=date]::-webkit-ca
 .hc-desmalezado:hover{border-color:var(--border);background:var(--bg-card)}
 .hc-desmalezado:hover .home-card-arrow{transform:none;color:var(--text-tertiary)}
 .home-footer{margin-top:auto;padding-top:32px;font-size:10px;color:var(--text-tertiary);letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
+
+/* ── Inicio: saludo dinámico + tarjetas de info ── */
+.home-hero{width:100%;max-width:420px;margin-bottom:22px;text-align:left}
+.home-greeting{font-family:'Manrope',sans-serif;font-size:26px;font-weight:700;color:var(--text-primary);letter-spacing:.2px;line-height:1.2}
+.home-greeting-sub{font-size:13px;color:var(--text-tertiary);margin-top:6px;font-family:'Manrope',sans-serif}
+.home-insights{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:420px;margin-bottom:26px}
+.insight-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;padding:16px;min-height:88px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.insight-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:1px;font-weight:600;font-family:'Manrope',sans-serif}
+.insight-value{font-size:24px;font-weight:800;color:var(--text-primary);font-family:'Manrope',sans-serif;line-height:1.15;margin-top:8px}
+.insight-last{cursor:pointer;transition:all .2s}
+.insight-last:active{transform:scale(.98)}
+.insight-last:hover{border-color:var(--border-2);background:var(--bg-card)}
+.insight-last .insight-value{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:8px}
+.insight-meta{font-size:13px;color:var(--accent);font-weight:700;font-family:'Manrope',sans-serif;margin-top:2px}
+.home-actions-label{width:100%;max-width:420px;font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:2px;font-weight:600;font-family:'Manrope',sans-serif;margin-bottom:10px}
