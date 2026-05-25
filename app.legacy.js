@@ -99,6 +99,18 @@ function moduloProximamente(){
   alert('Desmalezado — próximamente disponible.');
 }
 
+// Tabs de la pantalla Costos: Variables / Fijos
+function setCostosTab(tab){
+  const grupos={var:'costos-grupo-var',fij:'costos-grupo-fij'};
+  const botones={var:'costos-tab-var',fij:'costos-tab-fij'};
+  Object.entries(grupos).forEach(([k,id])=>{
+    const el=document.getElementById(id); if(el) el.style.display=(k===tab?'':'none');
+  });
+  Object.entries(botones).forEach(([k,id])=>{
+    const el=document.getElementById(id); if(el) el.classList.toggle('on', k===tab);
+  });
+}
+
 function goHome(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-home').classList.add('active');

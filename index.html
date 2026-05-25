@@ -230,6 +230,14 @@
 <!-- ══ SCREEN 4 — COSTOS ══ -->
 <div class="screen" id="s-costos">
 
+  <!-- TABS Variables / Fijos -->
+  <div class="costos-tabs tg-group" style="margin-bottom:14px">
+    <button class="tg-btn on" id="costos-tab-var" type="button" onclick="setCostosTab('var')">Variables</button>
+    <button class="tg-btn"    id="costos-tab-fij" type="button" onclick="setCostosTab('fij')">Fijos</button>
+  </div>
+
+  <!-- GRUPO VARIABLES -->
+  <div id="costos-grupo-var">
   <div class="card">
     <div class="card-head open" onclick="toggleCard(this)">
       <div class="card-num">5</div>
@@ -351,7 +359,7 @@
   <div class="card">
     <div class="card-head" onclick="toggleCard(this)">
       <div class="card-num">7</div>
-      <span class="card-title">Costos Directos Adicionales</span>
+      <span class="card-title">Otros costos variables</span>
       <span class="card-chevron">▾</span>
     </div>
     <div class="card-body collapsed">
@@ -360,20 +368,24 @@
       <button class="btn-add" onclick="addCosto('dir')">+ Agregar ítem</button>
     </div>
   </div>
+  </div><!-- /grupo-var -->
 
+  <!-- GRUPO FIJOS -->
+  <div id="costos-grupo-fij" style="display:none">
   <!-- COSTOS INDIRECTOS -->
   <div class="card">
-    <div class="card-head" onclick="toggleCard(this)">
+    <div class="card-head open" onclick="toggleCard(this)">
       <div class="card-num">8</div>
-      <span class="card-title">Costos Indirectos</span>
-      <span class="card-chevron">▾</span>
+      <span class="card-title">Costos fijos (indirectos)</span>
+      <span class="card-chevron open">▾</span>
     </div>
-    <div class="card-body collapsed">
+    <div class="card-body">
       <div class="info-box">Seguros, administración, amortización, coordinación. Los valores predeterminados vienen de Configuración.</div>
       <div id="costos-ind-container"></div>
       <button class="btn-add" onclick="addCosto('ind')">+ Agregar ítem</button>
     </div>
   </div>
+  </div><!-- /grupo-fij -->
 </div>
 
 <!-- ══ SCREEN 5 — PRECIO ══ -->

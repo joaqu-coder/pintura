@@ -11,7 +11,7 @@
 //
 // Para forzar un refresco limpio en una nueva versión, subir el número de CACHE.
 
-const CACHE = 'antigravity-v3';
+const CACHE = 'antigravity-v4';
 const ASSETS = [
   './',
   './index.html',
