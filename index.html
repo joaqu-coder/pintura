@@ -17,13 +17,6 @@
 </head>
 <body>
 
-<!-- ══ SPLASH / LAUNCH SCREEN ══ -->
-<div class="splash" id="splash" role="status" aria-label="Cargando Joaquïn">
-  <div class="splash-logo">Joaqu<span class="logo-diaeresis">ï</span>n</div>
-  <div class="splash-tagline">Sistema de Presupuestos</div>
-  <div class="splash-bar"><span></span></div>
-</div>
-
 <div class="app-wrap">
 
 <!-- TOP HEADER (slim) -->
@@ -41,8 +34,8 @@
 
     <!-- Saludo dinámico -->
     <div class="home-hero">
-      <div class="home-greeting" id="home-greeting">Hola, Joaquín</div>
-      <div class="home-greeting-sub">¿Qué presupuesto vamos a armar hoy?</div>
+      <div class="home-greeting" id="home-greeting">Joaquín</div>
+      <div class="home-greeting-sub" id="home-greeting-sub">Tocá el logo <strong>Joaquïn</strong> arriba para abrir tu información.</div>
     </div>
 
     <!-- Tarjetas de info -->
@@ -876,22 +869,6 @@
 </div>
 
   <script src="app.legacy.js"></script>
-  <script>
-  // Splash / Launch Screen — visible mínimo y auto-cierre al cargar la app
-  (function(){
-    var splash=document.getElementById('splash');if(!splash)return;
-    var MIN=1700, start=Date.now();
-    function hide(){
-      var wait=Math.max(0, MIN-(Date.now()-start));
-      setTimeout(function(){
-        splash.classList.add('hide');
-        splash.addEventListener('transitionend',function(){splash.remove();},{once:true});
-        setTimeout(function(){if(splash.parentNode)splash.remove();},700);
-      }, wait);
-    }
-    if(document.readyState==='complete')hide();else window.addEventListener('load',hide);
-  })();
-  </script>
   <script>
   // Registro del service worker (PWA). Se actualiza solo: cuando toma control
   // una versión nueva, recarga una vez para aplicarla.

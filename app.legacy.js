@@ -243,9 +243,13 @@ function ambVanoChange(ambId,vanoId,key,val){
   const a=ambientes.find(a=>a.id===ambId); if(!a||!Array.isArray(a.vanos))return;
   const v=a.vanos.find(v=>v.id===vanoId); if(!v)return;
   // Al cambiar tipo NO se sobreescriben ancho/alto (son manuales)
-  if(key==='tipo'){v.tipo=val;}
-  else{v[key]=parseFloat(String(val).replace(',','.'))||0;}
-  renderAmbientes(); calc();
+  if(key==='tipo'){ v.tipo=val; renderAmbientes(); calc(); return; }
+  v[key]=parseFloat(String(val).replace(',','.'))||0;
+  // Actualización in-place: NO re-renderizar mientras el usuario escribe
+  // (el re-render destruye el input y le hace perder el foco al primer dígito).
+  const sub=document.getElementById(`amb-vano-sub-${a.id}-${v.id}`);
+  if(sub) sub.textContent=fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0));
+  calcAmb(a.id); calc();
 }
 function removeAmbiente(id) { ambientes=ambientes.filter(a=>a.id!==id); renderAmbientes(); calc(); }
 function toggleAmbiente(id){
@@ -309,7 +313,7 @@ function renderAmbientes() {
           <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${v.alto}" min="0" step="0.01" oninput="ambVanoChange(${a.id},${v.id},'alto',this.value)"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span style="font-size:10px;color:var(--text-tertiary)">Subtotal vano: ${fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0))}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)">Subtotal vano: <span id="amb-vano-sub-${a.id}-${v.id}">${fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0))}</span></span>
           <button class="btn-rm" onclick="removeAmbVano(${a.id},${v.id})">×</button>
         </div>
       </div>`).join('')}
@@ -471,9 +475,11 @@ function removeAmbEdfVano(ambId,vanoId){
 function ambEdfVanoChange(ambId,vanoId,key,val){
   const a=ambientesEdf.find(a=>a.id===ambId);if(!a||!Array.isArray(a.vanos))return;
   const v=a.vanos.find(v=>v.id===vanoId);if(!v)return;
-  if(key==='tipo'){v.tipo=val;}
-  else{v[key]=parseFloat(String(val).replace(',','.'))||0;}
-  renderAmbientesEdf();calc();
+  if(key==='tipo'){ v.tipo=val; renderAmbientesEdf(); calc(); return; }
+  v[key]=parseFloat(String(val).replace(',','.'))||0;
+  const sub=document.getElementById(`ambedf-vano-sub-${a.id}-${v.id}`);
+  if(sub) sub.textContent=fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0)*(a.niveles||1));
+  calcAmbEdf(a.id); calc();
 }
 
 function renderAmbientesEdf(){
@@ -515,7 +521,7 @@ function renderAmbientesEdf(){
           <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${v.alto}" min="0" step="0.01" oninput="ambEdfVanoChange(${a.id},${v.id},'alto',this.value)"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span style="font-size:10px;color:var(--text-tertiary)">Subtotal vano: ${fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0)*(a.niveles||1))}</span>
+          <span style="font-size:10px;color:var(--text-tertiary)">Subtotal vano: <span id="ambedf-vano-sub-${a.id}-${v.id}">${fm2((v.ancho||0)*(v.alto||0)*(v.cantidad||0)*(a.niveles||1))}</span></span>
           <button class="btn-rm" onclick="removeAmbEdfVano(${a.id},${v.id})">×</button>
         </div>
       </div>`).join('')}
@@ -731,6 +737,34 @@ function combChange(){
 // ── CARPINTERÍA ──
 const CARP_MATS={puerta_int:['Madera','Metálica','Aluminio'],puerta_ext:['Madera','Metálica','Aluminio'],puerta_asc:['Madera','Metálica'],ven_int:['Madera','Metálica','Aluminio','PVC'],ven_ext:['Madera','Metálica','Aluminio','PVC'],zocalo:['Madera','Cerámica','MDF'],baranda:['Madera','Metálica','Hierro']};
 const CARP_LABELS={puerta_int:'Puerta interior',puerta_ext:'Puerta exterior',puerta_asc:'Pta. Ascensor',ven_int:'Ventana interior',ven_ext:'Ventana exterior',zocalo:'Zócalo',baranda:'Baranda'};
+
+// Devuelve un objeto con secciones agrupadas (Puertas / Ventanas / Zócalos / Barandas)
+// de los items cargados. Cada línea ya viene con cantidad + descripción + material.
+function describeCarpItems(items){
+  const list=(items||[]).filter(c=>c&&(c.cant|0)>0);
+  const groupOf=cat=>{
+    if(cat==='puerta_int'||cat==='puerta_ext'||cat==='puerta_asc') return 'Puertas';
+    if(cat==='ven_int'||cat==='ven_ext') return 'Ventanas';
+    if(cat==='zocalo') return 'Zócalos';
+    if(cat==='baranda') return 'Barandas';
+    return 'Otros';
+  };
+  const singular={puerta_int:'Puerta interior',puerta_ext:'Puerta exterior',puerta_asc:'Puerta de ascensor',ven_int:'Ventana interior',ven_ext:'Ventana exterior',zocalo:'Zócalo',baranda:'Baranda'};
+  const plural  ={puerta_int:'Puertas interiores',puerta_ext:'Puertas exteriores',puerta_asc:'Puertas de ascensor',ven_int:'Ventanas interiores',ven_ext:'Ventanas exteriores',zocalo:'Zócalos',baranda:'Barandas'};
+  const sections={};
+  list.forEach(c=>{
+    const g=groupOf(c.cat);
+    if(!sections[g]) sections[g]=[];
+    const n=c.cant|0;
+    const nombre=(n===1?singular[c.cat]:plural[c.cat])||CARP_LABELS[c.cat]||c.cat;
+    const mat=c.material?` (${c.material})`:'';
+    sections[g].push({ qty:n, line:`${n} ${nombre}${mat}` });
+  });
+  return sections;
+}
+function carpItemsAnyIn(items,cats){
+  return (items||[]).some(c=>c&&(c.cant|0)>0&&cats.includes(c.cat));
+}
 function addCarpItem(cat){carpItems.push({id:nid(),cat,material:CARP_MATS[cat][0],cant:1,precio:0});renderCarpinteria();}
 function removeCarpItem(id){carpItems=carpItems.filter(c=>c.id!==id);renderCarpinteria();calc();}
 function carpChange(id,key,val){
@@ -1079,8 +1113,14 @@ function openModal(){
 
   // Detalle de medición
   let medHTML='';
-  const hasZocalo=carpItems.some(c=>c.tipo==='zocalo'&&c.cant>0);
-  const hasBaranda=carpItems.some(c=>c.tipo==='baranda'&&c.cant>0);
+  const _carpDesc=describeCarpItems(carpItems);
+  const _carpOrder=['Puertas','Ventanas','Zócalos','Barandas'];
+  const adicionalesHTML=_carpOrder
+    .filter(g=>_carpDesc[g]&&_carpDesc[g].length)
+    .map(g=>`
+      <div class="res-row hi"><span class="rl">${g}</span><span class="rv"></span></div>
+      ${_carpDesc[g].map(it=>`<div class="res-row"><span class="rl" style="padding-left:14px">· ${it.line}</span><span class="rv"></span></div>`).join('')}
+    `).join('');
   if(S.tipoObra==='casa'&&ambientes.length>0){
     medHTML=ambientes.map(a=>{
       const mn=calcAmbMuroNeto(a).toFixed(2).replace('.',',');
@@ -1112,8 +1152,7 @@ function openModal(){
     <div class="res-row hi"><span class="rl">Superficie total</span><span class="rv">${(d.supReal||0).toFixed(2).replace('.',',')} m²</span></div>
     <div class="res-row"><span class="rl">Muros netos</span><span class="rv">${(ambientes.reduce((s,a)=>s+calcAmbMuroNeto(a),0)||ambientesEdf.reduce((s,a)=>s+calcAmbEdfMuroNeto(a),0)||0).toFixed(2).replace('.',',')} m²</span></div>
     <div class="res-row"><span class="rl">Cielorrasos</span><span class="rv">${(ambientes.reduce((s,a)=>s+calcAmbCielo(a),0)||ambientesEdf.reduce((s,a)=>s+calcAmbEdfCielo(a),0)||0).toFixed(2).replace('.',',')} m²</span></div>
-    <div class="res-row"><span class="rl">Zócalos</span><span class="rv">${hasZocalo?'Sí':'No'}</span></div>
-    <div class="res-row"><span class="rl">Barandas</span><span class="rv">${hasBaranda?'Sí':'No'}</span></div>
+    ${adicionalesHTML?`<div class="res-section">Adicionales</div>${adicionalesHTML}`:''}
     <div class="res-row"><span class="rl">Días estimados</span><span class="rv">${Math.ceil(d.jornadas||0)} días</span></div>
     <div class="res-section">Costos</div>
     <div class="res-row"><span class="rl">Mano de obra</span><span class="rv">${fmtm(d.moDirecta||0)}</span></div>
@@ -1135,10 +1174,8 @@ function openModal(){
       <span class="rl">TOTAL</span>
       <span class="rv">${fmtm(d.precioFinal||0)}</span>
     </div>
-    <div class="res-m2"><span class="rl">Precio final / m²</span><span class="rv">${fmtm(d.m2||0)}/m²</span></div>
     <div class="res-section">Punto de equilibrio</div>
     <div class="res-row"><span class="rl">Cubre costos</span><span class="rv">${fmtm(d.cto||0)}</span></div>
-    <div class="res-row"><span class="rl">Equilibrio / m²</span><span class="rv">${(d.equilibrioM2||0)>0?fmtm(d.equilibrioM2)+'/m²':'—'}</span></div>
     <div class="res-row"><span class="rl">Ganancia (margen ${Math.round((d.margen||0)*100)}%)</span><span class="rv" style="color:var(--positive)">+${fmtm(d.margenMonto||0)}</span></div>`;
   document.getElementById('modal-overlay').classList.add('open');
 }
@@ -1455,6 +1492,8 @@ function renderHomeGreeting(){
   else if(h>=13 && h<20){ saludo='Buenas tardes'; emoji='⛅'; }
   else { saludo='Buenas noches'; emoji='🌙'; }
   el.textContent='¡'+saludo+', Joaquín! '+emoji;
+  const sub=document.getElementById('home-greeting-sub');
+  if(sub) sub.textContent='¿Qué presupuesto vamos a armar hoy?';
 }
 
 let _ultimaCotId=null;
@@ -2462,18 +2501,14 @@ function enviarWhatsApp(id){
       ambsEdf.forEach(a=>{try{muroNeto+=calcAmbEdfMuroNeto(a);cieloTotal+=calcAmbEdfCielo(a);}catch(e){}});
     }
 
-    // Zócalos y barandas
+    // Adicionales (puertas, ventanas, zócalos, barandas) con material
     const carp=est.carpItems||[];
-    const hasZocalo=carp.some(c=>c.cat==='zocalo'&&c.cant>0);
-    const hasBaranda=carp.some(c=>c.cat==='baranda'&&c.cant>0);
-
-    // Puertas
-    const puertas=carp.filter(c=>['puerta_int','puerta_ext','puerta_asc'].includes(c.cat)&&c.cant>0);
-    let puertasTxt='No';
-    if(puertas.length>0){
-      const labs={puerta_int:'Interior',puerta_ext:'Exterior',puerta_asc:'Ascensor'};
-      puertasTxt=puertas.map(p=>`${p.cant} ${labs[p.cat]||p.cat}`).join(', ');
-    }
+    const carpSecs=describeCarpItems(carp);
+    const carpOrder=['Puertas','Ventanas','Zócalos','Barandas'];
+    const adicionalesTxt=carpOrder
+      .filter(g=>carpSecs[g]&&carpSecs[g].length)
+      .map(g=>`*${g}:*\n`+carpSecs[g].map(it=>`  · ${it.line}`).join('\n'))
+      .join('\n');
 
     // Ambientes listados
     const listaAmbs=(item.tipoObra==='casa'?ambs:ambsEdf);
@@ -2490,7 +2525,6 @@ function enviarWhatsApp(id){
 
     const dias=Math.ceil(d.jornadas||0);
     const total=fmtm(d.precioFinal||item.total||0);
-    const m2=fmtm(d.m2SinIva||d.m2||0);
 
     msg=`*PRESUPUESTO DE PINTURA*\n`
       +`${nro}${fecha}\n\n`
@@ -2503,12 +2537,9 @@ function enviarWhatsApp(id){
       +`📐 Superficie total: *${supTotal} m²*\n`
       +`📏 Muros netos: ${muroNeto.toFixed(2).replace('.',',')} m²\n`
       +`🏠 Cielorrasos: ${cieloTotal.toFixed(2).replace('.',',')} m²\n`
-      +`Zócalos: ${hasZocalo?'Sí':'No'}\n`
-      +`Barandas: ${hasBaranda?'Sí':'No'}\n`
-      +`Puertas: ${puertasTxt}\n`
-      +`📅 Días estimados: *${dias} días*\n`
+      +(adicionalesTxt?`\n🧱 *ADICIONALES INCLUIDOS*\n${adicionalesTxt}\n`:'')
+      +`\n📅 Días estimados: *${dias} días*\n`
       +`\n💰 *TOTAL A COBRAR: ${total}*\n`
-      +`   Precio/m²: ${m2}\n`
       +`\n_Este presupuesto tiene validez de 15 días desde la fecha de emisión._\n`
       +`_Los precios no incluyen materiales salvo indicación expresa. · Joaquín_`;
   } else {
@@ -2692,17 +2723,13 @@ function renderPdfPintura(item, est, fecha){
     <div class="pdf-row hi"><span class="pr-l">Superficie total</span><span class="pr-v">${(d.supReal||0).toFixed(2).replace('.',',')} m²</span></div>
     <div class="pdf-row"><span class="pr-l">Muros netos</span><span class="pr-v">${(est.ambientes||[]).reduce((s,a)=>{try{return s+calcAmbMuroNeto(a);}catch(e){return s;}},0).toFixed(2).replace('.',',')} m²</span></div>
     <div class="pdf-row"><span class="pr-l">Cielorrasos</span><span class="pr-v">${(est.ambientes||[]).reduce((s,a)=>{try{return s+calcAmbCielo(a);}catch(e){return s;}},0).toFixed(2).replace('.',',')} m²</span></div>
-    <div class="pdf-row"><span class="pr-l">Zócalos</span><span class="pr-v">${(est.carpItems||[]).some(c=>c.tipo==='zocalo'&&c.cant>0)?'Sí':'No'}</span></div>
-    <div class="pdf-row"><span class="pr-l">Barandas</span><span class="pr-v">${(est.carpItems||[]).some(c=>c.tipo==='baranda'&&c.cant>0)?'Sí':'No'}</span></div>
     <div class="pdf-row"><span class="pr-l">Días estimados</span><span class="pr-v">${Math.ceil(d.jornadas||0)} días</span></div>
+
+    ${(()=>{ const secs=describeCarpItems(est.carpItems||[]); const order=['Puertas','Ventanas','Zócalos','Barandas']; const visible=order.filter(g=>secs[g]&&secs[g].length); if(!visible.length) return ''; return `<div class="pdf-section-title">Adicionales incluidos</div>`+visible.map(g=>`<div class="pdf-row hi"><span class="pr-l">${g}</span><span class="pr-v"></span></div>`+secs[g].map(it=>`<div class="pdf-row"><span class="pr-l" style="padding-left:14px">· ${it.line}</span><span class="pr-v"></span></div>`).join('')).join(''); })()}
 
     <div class="pdf-total-box">
       <span class="pt-l">TOTAL A PAGAR${conIva?' (con IVA)':''}</span>
       <span class="pt-v">${fmtm(d.precioFinal||item.total||0)}</span>
-    </div>
-    <div class="pdf-m2-box">
-      <span class="pm-l">Precio por m²</span>
-      <span class="pm-v">${fmtm(d.m2||0)} / m²</span>
     </div>
 
     <div class="pdf-footer">
@@ -2786,7 +2813,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Inicializar módulo jornales
   jInit();
   jRender();
-  // Iniciar en pantalla Home
+  // Iniciar en pantalla Home — el saludo dinámico y las tarjetas se cargan
+  // recién cuando el usuario toca el botón "Joaquïn" del topbar (goHome()).
   const fab=document.getElementById('fab-btn');if(fab)fab.style.display='none';
-  renderHome();
 });
