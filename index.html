@@ -118,22 +118,31 @@
 
 <!-- ══ SCREEN — TIPOS DE UNIDAD (modo Proyecto) ══ -->
 <div class="screen" id="s-tipos-unidad">
-  <div class="card">
-    <div class="card-head open" onclick="toggleCard(this)">
-      <div class="card-num" style="background:var(--accent)">P</div>
-      <span class="card-title">Tipos de unidad</span>
-      <span class="card-chevron open">▾</span>
-    </div>
-    <div class="card-body" id="tipos-unidad-container">
-      <!-- renderTiposUnidad() -->
-    </div>
-    <div style="padding:0 16px 16px">
-      <button onclick="addTipoUnidad()"
-        style="width:100%;background:var(--bg-elevated);border:1px dashed var(--border-2);border-radius:8px;padding:12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;font-family:inherit;letter-spacing:.3px">
-        + Agregar tipo
-      </button>
+
+  <!-- Nombre del proyecto (estático — no se re-renderiza) -->
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-body" style="padding:12px 16px">
+      <label style="font-size:10px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:6px">Nombre del proyecto</label>
+      <input id="proyecto-nombre-input" type="text" placeholder="Ej: Barrio Los Pinos…"
+        oninput="CLI.nombre=this.value"
+        style="width:100%;background:var(--bg-elevated);border:1px solid var(--border-2);border-radius:6px;padding:9px 12px;color:var(--text-primary);font-size:14px;font-weight:600;font-family:'Manrope',sans-serif;outline:none;box-sizing:border-box">
     </div>
   </div>
+
+  <!-- Lista de tipos (renderizada por JS) -->
+  <div id="tipos-unidad-container"></div>
+
+  <!-- Acciones -->
+  <div style="padding:4px 0 16px;display:flex;flex-direction:column;gap:8px">
+    <button onclick="addTipoUnidad()"
+      style="width:100%;background:var(--bg-elevated);border:1px dashed var(--border-2);border-radius:8px;padding:12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;font-family:inherit;letter-spacing:.3px">
+      + Agregar tipo de unidad
+    </button>
+    <button id="btn-continuar-proyecto" onclick="goScreen('s-cuadrilla')" style="display:none;width:100%;background:var(--accent);border:none;border-radius:8px;padding:13px;font-size:13px;font-weight:700;color:#000;cursor:pointer;font-family:inherit;letter-spacing:.3px">
+      Calcular cotización →
+    </button>
+  </div>
+
 </div>
 
 <!-- ══ SCREEN 2 — MEDICIÓN ══ -->

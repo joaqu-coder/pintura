@@ -79,10 +79,24 @@ function calcSectorNeto(s){ return Math.max(0, calcSectorBruto(s)-((s.tipo==='mu
 // ═══════════   PROYECTO — MÚLTIPLES TIPOS DE UNIDAD   ════════
 // ══════════════════════════════════════════════════════════════
 
+// Factor según altura real en metros
+function calcFactorAltura(metros) {
+  const m = parseFloat(metros) || 2.70;
+  if (m <= 3.00) return 1.00;
+  if (m <= 6.00) return 0.80;
+  return 0.65;
+}
+function etiquetaAltura(metros) {
+  const m = parseFloat(metros) || 2.70;
+  if (m <= 3.00) return 'Baja';
+  if (m <= 6.00) return 'Media';
+  return 'Alta';
+}
+
 function addTipoUnidad() {
   tiposUnidad.push({
-    id: nid(), label: 'Unidad tipo', tipoBase: 'casa',
-    cantidad: 1, alturaZona: 'baja',
+    id: nid(), label: 'Modelo A', tipoBase: 'casa',
+    cantidad: 1, alturaMetros: 2.70,
     ambientes: [], ambientesEdf: [],
     m2Calculado: 0,
   });
@@ -96,12 +110,18 @@ function removeTipoUnidad(id) {
   renderTiposUnidad(); calc();
 }
 
+// Actualiza data sin re-renderizar — para usar en oninput de texto/número
+function tipoDataUpdate(id, key, val) {
+  const tipo = tiposUnidad.find(t => t.id === id); if (!tipo) return;
+  tipo[key] = val;
+}
+
+// Actualiza data, re-renderiza y recalcula — para usar en onblur/onchange o botones
 function tipoChange(id, key, val) {
   const tipo = tiposUnidad.find(t => t.id === id); if (!tipo) return;
-  if (key === 'cantidad') tipo.cantidad = Math.max(1, parseInt(val) || 1);
-  else if (key === 'tipoBase') tipo.tipoBase = val;
-  else if (key === 'alturaZona') tipo.alturaZona = val;
-  else tipo[key] = val;
+  if (key === 'cantidad')     tipo.cantidad     = Math.max(1, parseInt(val) || 1);
+  else if (key === 'alturaMetros') tipo.alturaMetros = Math.max(0.5, parseFloat(val) || 2.70);
+  else                        tipo[key]         = val;
   renderTiposUnidad(); calc();
 }
 
@@ -148,11 +168,21 @@ function _guardarAmbientesEnTipo() {
 function _actualizarBreadcrumb() {
   const hdr = document.getElementById('medicion-tipo-header'); if (!hdr) return;
   const tipo = _tipoEditando;
+  const alt  = parseFloat(tipo.alturaMetros) || 2.70;
+  const zon  = etiquetaAltura(alt);
+  const col  = alt > 6 ? '#e67e22' : alt > 3 ? '#9b59b6' : 'var(--text-secondary)';
   hdr.style.display = '';
   hdr.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 0">
-      <button onclick="volverATipos()" style="background:var(--bg-elevated);border:1px solid var(--border-2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text-secondary);font-family:inherit">← Tipos</button>
-      <span style="font-size:11px;color:var(--text-tertiary)">Editando <strong style="color:var(--accent)">${tipo.label}</strong> · × ${tipo.cantidad} · <span style="color:${tipo.alturaZona==='alta'?'#e67e22':tipo.alturaZona==='media'?'#9b59b6':'var(--text-secondary)'}">${ALTURA_LABELS[tipo.alturaZona||'baja']}</span></span>
+    <div style="background:var(--bg-elevated);border-bottom:1px solid var(--border-2);padding:10px 16px;display:flex;align-items:center;gap:10px">
+      <button onclick="volverATipos()"
+        style="background:var(--accent);border:none;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;color:#000;font-family:inherit;white-space:nowrap">
+        ← Guardar y volver
+      </button>
+      <span style="font-size:11px;color:var(--text-tertiary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+        <strong style="color:var(--accent)">${tipo.label}</strong>
+        <span style="margin:0 4px">·</span>×&nbsp;${tipo.cantidad}
+        <span style="margin:0 4px">·</span><span style="color:${col}">${alt.toFixed(2)}&nbsp;m (${zon})</span>
+      </span>
     </div>`;
 }
 
@@ -163,9 +193,14 @@ function _ocultarBreadcrumb() {
 
 function renderTiposUnidad() {
   const c = document.getElementById('tipos-unidad-container'); if (!c) return;
+
+  // Botón "continuar" - visible cuando hay al menos un tipo
+  const btnCont = document.getElementById('btn-continuar-proyecto');
+  if (btnCont) btnCont.style.display = tiposUnidad.length > 0 ? '' : 'none';
+
   if (tiposUnidad.length === 0) {
     c.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--text-tertiary);font-size:13px;line-height:1.6">
-      No hay tipos definidos aún.<br>Presioná <strong style="color:var(--accent)">+ Agregar tipo</strong> para empezar.
+      Sin tipos definidos.<br>Presioná <strong style="color:var(--accent)">+ Agregar tipo</strong> para empezar.
     </div>`;
     return;
   }
@@ -174,59 +209,104 @@ function renderTiposUnidad() {
   let totalProyecto = 0;
 
   tiposUnidad.forEach(tipo => {
-    const factor  = ALTURA_FACTORES[tipo.alturaZona || 'baja'];
+    const alt     = parseFloat(tipo.alturaMetros) || 2.70;
+    const factor  = calcFactorAltura(alt);
+    const zon     = etiquetaAltura(alt);
+    const colZon  = alt > 6 ? '#e67e22' : alt > 3 ? '#9b59b6' : 'var(--text-secondary)';
     const m2Unit  = tipo.m2Calculado || 0;
     const m2Total = m2Unit * tipo.cantidad * factor;
     totalProyecto += m2Total;
     const editando = _tipoEditando && _tipoEditando.id === tipo.id;
+    const labelEsc = (tipo.label || '').replace(/"/g, '&quot;');
 
-    html += `<div class="amb-block" style="margin-bottom:12px${editando?';border-color:var(--accent)':''}">
-      <div class="amb-head" style="margin-bottom:10px">
-        <input type="text" value="${tipo.label}"
-          style="background:transparent;border:none;color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1;min-width:0;outline:none;font-family:'Manrope',sans-serif;padding:0"
-          oninput="tipoChange(${tipo.id},'label',this.value)">
-        <button class="btn-rm" onclick="removeTipoUnidad(${tipo.id})">×</button>
+    html += `
+    <div class="amb-block" style="margin-bottom:12px${editando ? ';border-color:var(--accent)' : ''}">
+
+      <!-- Nombre del modelo -->
+      <div class="amb-head" style="margin-bottom:12px">
+        <input type="text" value="${labelEsc}"
+          placeholder="Nombre del modelo…"
+          style="background:transparent;border:none;color:var(--accent);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1;min-width:0;outline:none;font-family:'Manrope',sans-serif;padding:0"
+          oninput="tipoDataUpdate(${tipo.id},'label',this.value)"
+          onblur="tipoChange(${tipo.id},'label',this.value)">
+        <button class="btn-rm" onclick="removeTipoUnidad(${tipo.id})" title="Eliminar">×</button>
       </div>
 
-      <div class="row3" style="margin-bottom:10px">
+      <!-- Tipo / Cant / Altura -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
         <div class="fg" style="margin-bottom:0">
           <label>Tipo</label>
           <div class="tg-group">
-            <button class="tg-btn ${tipo.tipoBase==='casa'?'on':''}" onclick="tipoChange(${tipo.id},'tipoBase','casa')">Casa</button>
-            <button class="tg-btn ${tipo.tipoBase==='edificio'?'on':''}" onclick="tipoChange(${tipo.id},'tipoBase','edificio')">Edif.</button>
+            <button class="tg-btn ${tipo.tipoBase === 'casa' ? 'on' : ''}"
+              onclick="tipoChange(${tipo.id},'tipoBase','casa')">Casa</button>
+            <button class="tg-btn ${tipo.tipoBase === 'edificio' ? 'on' : ''}"
+              onclick="tipoChange(${tipo.id},'tipoBase','edificio')">Edif.</button>
           </div>
         </div>
         <div class="fg" style="margin-bottom:0">
           <label>Cantidad</label>
           <div class="input-wrap">
             <input type="number" value="${tipo.cantidad}" min="1" step="1" inputmode="numeric"
-              oninput="tipoChange(${tipo.id},'cantidad',this.value)">
+              style="text-align:right"
+              onchange="tipoChange(${tipo.id},'cantidad',this.value)">
             <span class="input-unit">u</span>
           </div>
         </div>
         <div class="fg" style="margin-bottom:0">
-          <label>Altura</label>
-          <select onchange="tipoChange(${tipo.id},'alturaZona',this.value)">
-            ${Object.entries(ALTURA_LABELS).map(([k,v])=>`<option value="${k}" ${tipo.alturaZona===k?'selected':''}>${v}</option>`).join('')}
-          </select>
+          <label>Altura (m)</label>
+          <div class="input-wrap">
+            <input type="number" value="${alt.toFixed(2)}" min="0.5" max="50" step="0.05" inputmode="decimal"
+              style="text-align:right"
+              onchange="tipoChange(${tipo.id},'alturaMetros',this.value)">
+            <span class="input-unit">m</span>
+          </div>
         </div>
       </div>
 
-      <div class="sup-row" style="margin-bottom:10px">
-        <div class="sup-chip"><span class="sl">m² / unidad</span><span class="sv">${fm2(m2Unit)}</span></div>
-        <div class="sup-chip"><span class="sl">× ${tipo.cantidad} · factor ${factor.toFixed(2)}</span><span class="sv">${fm2(m2Total)}</span></div>
+      <!-- Info altura -->
+      <div style="font-size:10px;color:${colZon};font-weight:700;margin-bottom:10px;letter-spacing:.3px">
+        ${zon.toUpperCase()} · factor de rendimiento ${factor.toFixed(2)}
+        <span style="color:var(--text-tertiary);font-weight:400;margin-left:6px">(baja ≤3m · media 3–6m · alta >6m)</span>
       </div>
 
+      <!-- m² resumen -->
+      <div class="sup-row" style="margin-bottom:10px">
+        <div class="sup-chip">
+          <span class="sl">m² por unidad</span>
+          <span class="sv">${m2Unit > 0 ? fm2(m2Unit) : '—'}</span>
+        </div>
+        <div class="sup-chip">
+          <span class="sl">× ${tipo.cantidad} · ×${factor.toFixed(2)}</span>
+          <span class="sv">${m2Total > 0 ? fm2(m2Total) : '—'}</span>
+        </div>
+      </div>
+
+      <!-- Botón editar ambientes -->
       <button onclick="editarAmbientesTipo(${tipo.id})"
-        style="width:100%;background:${editando?'var(--accent)':'var(--bg-elevated)'};border:1px solid var(--accent);border-radius:6px;padding:9px;font-size:11px;font-weight:700;color:${editando?'#000':'var(--accent)'};cursor:pointer;font-family:inherit;letter-spacing:.3px">
-        ${editando ? '✏ Editando ambientes…' : 'Editar ambientes →'}
+        style="width:100%;background:${editando ? 'var(--accent)' : 'var(--bg-elevated)'};border:1px solid var(--accent);border-radius:6px;padding:10px;font-size:12px;font-weight:700;color:${editando ? '#000' : 'var(--accent)'};cursor:pointer;font-family:inherit;letter-spacing:.3px">
+        ${editando ? '✏ Editando ambientes…' : 'Cargar ambientes →'}
       </button>
     </div>`;
   });
 
-  html += `<div class="sup-total-chip" style="margin-top:8px">
+  // Totales por tipología + total general
+  html += `<div style="margin-top:4px">`;
+  tiposUnidad.forEach(tipo => {
+    const alt    = parseFloat(tipo.alturaMetros) || 2.70;
+    const factor = calcFactorAltura(alt);
+    const m2u    = tipo.m2Calculado || 0;
+    const m2t    = m2u * tipo.cantidad * factor;
+    if (m2t > 0) {
+      html += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);padding:3px 0">
+        <span>${tipo.label} × ${tipo.cantidad}</span>
+        <span>${fm2(m2t)}</span>
+      </div>`;
+    }
+  });
+  html += `</div>
+  <div class="sup-total-chip" style="margin-top:6px">
     <span class="sl">Total general del proyecto</span>
-    <span class="sv" id="tipos-total-m2">${fm2(totalProyecto)}</span>
+    <span class="sv">${fm2(totalProyecto)}</span>
   </div>`;
 
   c.innerHTML = html;
@@ -244,6 +324,10 @@ function entrarModoProyecto() {
   ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
+  // Sincronizar nombre del proyecto con el input estático del HTML
+  const pni = document.getElementById('proyecto-nombre-input');
+  if (pni) pni.value = CLI.nombre || '';
+
   renderTiposUnidad();
   goScreen('s-tipos-unidad');
 }
@@ -1277,26 +1361,22 @@ function _syncCfgCosto(tipo,cfgKey,nombre,monto){
 function calc(){
   let supMuroBruto=0,supCielo=0,paredesCount=0;
   if(S.tipoObra==='proyecto'){
-    // ── Modo proyecto: suma tipos × cantidad × factor altura ──
-    // Actualizar m2Calculado de cada tipo leyendo sus ambientes
+    // Suma tipos × cantidad × factor altura.
+    // Para el tipo actualmente en edición, usa los globales (ambientes/ambientesEdf)
+    // para que el total refleje cambios en tiempo real sin necesidad de "guardar".
     tiposUnidad.forEach(tipo => {
+      const isActive = _tipoEditando && _tipoEditando.id === tipo.id;
+      const ambs     = isActive ? ambientes    : (tipo.ambientes    || []);
+      const ambsEdf  = isActive ? ambientesEdf : (tipo.ambientesEdf || []);
       let m2u = 0;
-      (tipo.ambientes || []).forEach(a => { m2u += calcAmbTotal(a); });
-      (tipo.ambientesEdf || []).forEach(a => { m2u += calcAmbEdfTotal(a); });
+      ambs.forEach(a    => { m2u += calcAmbTotal(a); });
+      ambsEdf.forEach(a => { m2u += calcAmbEdfTotal(a); });
       tipo.m2Calculado = m2u;
-      const factor = ALTURA_FACTORES[tipo.alturaZona || 'baja'];
+      const factor = calcFactorAltura(tipo.alturaMetros);
       supMuroBruto += m2u * tipo.cantidad * factor;
     });
     renderTiposUnidad();
-    // Si está editando un tipo, actualizar el breadcrumb
-    if (_tipoEditando) {
-      // Sincronizar m2 del tipo en edición con los ambientes globales actuales
-      let m2act = 0;
-      ambientes.forEach(a => { m2act += calcAmbTotal(a); });
-      ambientesEdf.forEach(a => { m2act += calcAmbEdfTotal(a); });
-      _tipoEditando.m2Calculado = m2act;
-      _actualizarBreadcrumb();
-    }
+    if (_tipoEditando) _actualizarBreadcrumb();
   } else if(S.tipoObra==='casa'){
     ambientes.forEach(a=>{
       const isFachada=a.tipo==='Fachadas / muros exteriores';
@@ -1689,6 +1769,13 @@ function histRestaurarEstado(estado){
 
   // ── Restaurar proyecto multi-tipo ──
   tiposUnidad = JSON.parse(JSON.stringify(estado.tiposUnidad || []));
+  // Migrar saves antiguos que usaban alturaZona en lugar de alturaMetros
+  tiposUnidad = tiposUnidad.map(t => {
+    if (t.alturaMetros === undefined) {
+      t.alturaMetros = t.alturaZona === 'alta' ? 7.00 : t.alturaZona === 'media' ? 4.50 : 2.70;
+    }
+    return t;
+  });
   _tipoEditando = null;
 
   // ── Navegación al módulo correcto según el tipo de presupuesto guardado ──
