@@ -194,11 +194,10 @@ function _ocultarBreadcrumb() {
 function renderTiposUnidad() {
   const c = document.getElementById('tipos-unidad-container'); if (!c) return;
 
-  // Botón "continuar" - visible cuando hay al menos un tipo
   const btnCont = document.getElementById('btn-continuar-proyecto');
-  if (btnCont) btnCont.style.display = tiposUnidad.length > 0 ? '' : 'none';
 
   if (tiposUnidad.length === 0) {
+    if (btnCont) btnCont.style.display = 'none';
     c.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--text-tertiary);font-size:13px;line-height:1.6">
       Sin tipos definidos.<br>Presioná <strong style="color:var(--accent)">+ Agregar tipo</strong> para empezar.
     </div>`;
@@ -309,6 +308,7 @@ function renderTiposUnidad() {
     <span class="sv">${fm2(totalProyecto)}</span>
   </div>`;
 
+  if (btnCont) btnCont.style.display = totalProyecto > 0 ? '' : 'none';
   c.innerHTML = html;
 }
 
@@ -362,9 +362,6 @@ function goConfig(){
   setActiveModule('config');
   showSectionNav(false);
   goScreen('s-config');
-}
-function moduloProximamente(){
-  alert('Desmalezado — próximamente disponible.');
 }
 
 // Tabs de la pantalla Costos: Variables / Fijos
@@ -1552,6 +1549,30 @@ function openModal(){
         :'';
       return`<div class="res-row"><span class="rl">${a.tipo||'Espacio'}</span><span class="rv">${mn} m² muro · ${ci} m² cielo${detalle?' · '+detalle:''}</span></div>`;
     }).join('');
+  } else if(S.tipoObra==='proyecto'&&tiposUnidad.length>0){
+    medHTML=tiposUnidad.map(tipo=>{
+      const factor=calcFactorAltura(parseFloat(tipo.alturaMetros)||2.70);
+      const m2Unit=tipo.m2Calculado||0;
+      const m2Total=m2Unit*tipo.cantidad*factor;
+      const zon=etiquetaAltura(parseFloat(tipo.alturaMetros)||2.70);
+      return`<div class="res-row"><span class="rl">${tipo.label}</span><span class="rv">${tipo.cantidad} unid. · ${m2Unit.toFixed(2).replace('.',',')} m²/u · altura ${zon} → ${m2Total.toFixed(2).replace('.',',')} m²</span></div>`;
+    }).join('');
+  }
+
+  // Cálculo de muros netos y cielorrasos según tipo de obra
+  let _muroNeto=0,_cielo=0;
+  if(S.tipoObra==='proyecto'){
+    tiposUnidad.forEach(tipo=>{
+      const isActive=_tipoEditando&&_tipoEditando.id===tipo.id;
+      const ambs =isActive?ambientes   :(tipo.ambientes   ||[]);
+      const ambsE=isActive?ambientesEdf:(tipo.ambientesEdf||[]);
+      const factor=calcFactorAltura(parseFloat(tipo.alturaMetros)||2.70);
+      ambs.forEach(a =>{_muroNeto+=calcAmbMuroNeto(a)   *tipo.cantidad*factor;_cielo+=calcAmbCielo(a)   *tipo.cantidad*factor;});
+      ambsE.forEach(a=>{_muroNeto+=calcAmbEdfMuroNeto(a)*tipo.cantidad*factor;_cielo+=calcAmbEdfCielo(a)*tipo.cantidad*factor;});
+    });
+  } else {
+    _muroNeto=ambientes.reduce((s,a)=>s+calcAmbMuroNeto(a),0)||ambientesEdf.reduce((s,a)=>s+calcAmbEdfMuroNeto(a),0)||0;
+    _cielo   =ambientes.reduce((s,a)=>s+calcAmbCielo(a),0)   ||ambientesEdf.reduce((s,a)=>s+calcAmbEdfCielo(a),0)   ||0;
   }
 
   // Datos del cliente (si existen)
@@ -1569,8 +1590,8 @@ function openModal(){
     <div class="res-section">Alcance de la obra</div>
     ${medHTML}
     <div class="res-row hi"><span class="rl">Superficie total</span><span class="rv">${(d.supReal||0).toFixed(2).replace('.',',')} m²</span></div>
-    <div class="res-row"><span class="rl">Muros netos</span><span class="rv">${(ambientes.reduce((s,a)=>s+calcAmbMuroNeto(a),0)||ambientesEdf.reduce((s,a)=>s+calcAmbEdfMuroNeto(a),0)||0).toFixed(2).replace('.',',')} m²</span></div>
-    <div class="res-row"><span class="rl">Cielorrasos</span><span class="rv">${(ambientes.reduce((s,a)=>s+calcAmbCielo(a),0)||ambientesEdf.reduce((s,a)=>s+calcAmbEdfCielo(a),0)||0).toFixed(2).replace('.',',')} m²</span></div>
+    <div class="res-row"><span class="rl">Muros netos</span><span class="rv">${_muroNeto.toFixed(2).replace('.',',')} m²</span></div>
+    <div class="res-row"><span class="rl">Cielorrasos</span><span class="rv">${_cielo.toFixed(2).replace('.',',')} m²</span></div>
     ${adicionalesHTML?`<div class="res-section">Adicionales</div>${adicionalesHTML}`:''}
     <div class="res-row"><span class="rl">Días estimados</span><span class="rv">${Math.ceil(d.jornadas||0)} días</span></div>
     <div class="res-section">Costos</div>
@@ -1655,6 +1676,7 @@ function histCapturarEstado(){
     _pjLastCalc: window._pjLastCalc||{},
     // ── Proyecto multi-tipo ──
     tiposUnidad: JSON.parse(JSON.stringify(tiposUnidad)),
+    _proyectoNombre: (document.getElementById('proyecto-nombre-input')||{}).value||'',
     // ── Config nuevos campos ──
     _cfgAlmuerzo:    cfgGet('cfg-almuerzo'),
     _cfgTanqueL:     cfgGet('cfg-tanque-l'),
@@ -1777,6 +1799,8 @@ function histRestaurarEstado(estado){
     return t;
   });
   _tipoEditando = null;
+  const _pni = document.getElementById('proyecto-nombre-input');
+  if (_pni) _pni.value = estado._proyectoNombre || '';
 
   // ── Navegación al módulo correcto según el tipo de presupuesto guardado ──
   const tipoGuardado = (estado.S && estado.S.tipoObra) || null;
@@ -3017,13 +3041,63 @@ function renderPdfDesdeItem(item){
   const esPJ = item.tipoObra === 'jornales-ppto';
   const fecha = item.fecha || new Date().toLocaleString('es-AR');
 
+  const esProyecto = item.tipoObra === 'proyecto';
   if(esPJ){
     sheet.innerHTML = renderPdfPjornales(item, est, fecha);
   } else if(esJornales){
     sheet.innerHTML = renderPdfJornales(item, est, fecha);
+  } else if(esProyecto){
+    sheet.innerHTML = renderPdfProyecto(item, est, fecha);
   } else {
     sheet.innerHTML = renderPdfPintura(item, est, fecha);
   }
+}
+
+function renderPdfProyecto(item, est, fecha){
+  const d=est._lastCalc||{};
+  const cli={nombre:est._cliNombre||'',direccion:est._cliDireccion||'',telefono:est._cliTelefono||'',nro:est._cliNro||'',obs:est._cliObs||''};
+  const tiposU=est.tiposUnidad||[];
+  const conIva=(est.S&&est.S.conIva)||false;
+  const tiposHTML=tiposU.map(tipo=>{
+    const factor=calcFactorAltura(parseFloat(tipo.alturaMetros)||2.70);
+    const m2Unit=tipo.m2Calculado||0;
+    const m2Total=m2Unit*tipo.cantidad*factor;
+    const zon=etiquetaAltura(parseFloat(tipo.alturaMetros)||2.70);
+    return`<div class="pdf-row"><span class="pr-l">${tipo.label}</span><span class="pr-v">${tipo.cantidad} unid. · alt. ${zon} → ${m2Total.toFixed(2).replace('.',',')} m²</span></div>`;
+  }).join('');
+  return`
+    <div class="pdf-header">
+      <div>
+        <div class="pdf-brand">Joaquín</div>
+        <div class="pdf-brand-sub">Presupuesto de Proyecto</div>
+      </div>
+      <div class="pdf-meta">
+        <div><strong>${cli.nro?'N° '+cli.nro:item.nombre}</strong></div>
+        <div>Fecha: ${fecha}</div>
+        <div>Tipo: Proyecto multi-unidad</div>
+      </div>
+    </div>
+    ${(cli.nombre||cli.direccion||cli.telefono||cli.obs)?`
+    <div class="pdf-section-title">Datos del cliente</div>
+    <div class="pdf-client-block">
+      ${cli.nombre    ?`<div class="pdf-client-row"><span class="pdf-client-lbl">Cliente</span><span class="pdf-client-val">${cli.nombre}</span></div>`:''}
+      ${cli.direccion ?`<div class="pdf-client-row"><span class="pdf-client-lbl">Dirección</span><span class="pdf-client-val">${cli.direccion}</span></div>`:''}
+      ${cli.telefono  ?`<div class="pdf-client-row"><span class="pdf-client-lbl">Teléfono</span><span class="pdf-client-val">${cli.telefono}</span></div>`:''}
+      ${cli.obs       ?`<div class="pdf-client-row"><span class="pdf-client-lbl">Observ.</span><span class="pdf-client-val">${cli.obs}</span></div>`:''}
+    </div>`:''}
+    <div class="pdf-section-title">Tipos de unidad</div>
+    ${tiposHTML||'<div class="pdf-row"><span class="pr-l">Sin tipos definidos</span><span class="pr-v">—</span></div>'}
+    <div class="pdf-row hi"><span class="pr-l">Superficie total del proyecto</span><span class="pr-v">${(d.supReal||0).toFixed(2).replace('.',',')} m²</span></div>
+    <div class="pdf-row"><span class="pr-l">Días estimados</span><span class="pr-v">${Math.ceil(d.jornadas||0)} días</span></div>
+    <div class="pdf-total-box">
+      <span class="pt-l">TOTAL A PAGAR${conIva?' (con IVA)':''}</span>
+      <span class="pt-v">${fmtm(d.precioFinal||item.total||0)}</span>
+    </div>
+    <div class="pdf-footer">
+      Este presupuesto tiene validez de 15 días desde la fecha de emisión.<br>
+      Los precios no incluyen materiales salvo indicación expresa. · Joaquín
+    </div>
+  `;
 }
 
 function renderPdfPjornales(item, est, fecha){
@@ -3247,7 +3321,5 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Inicializar módulo jornales
   jInit();
   jRender();
-  // Iniciar en pantalla Home — el saludo dinámico y las tarjetas se cargan
-  // recién cuando el usuario toca el botón "Joaquïn" del topbar (goHome()).
-  const fab=document.getElementById('fab-btn');if(fab)fab.style.display='none';
+  goHome();
 });
