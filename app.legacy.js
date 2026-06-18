@@ -324,10 +324,6 @@ function entrarModoProyecto() {
   ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-  // Sincronizar nombre del proyecto con el input estático del HTML
-  const pni = document.getElementById('proyecto-nombre-input');
-  if (pni) pni.value = CLI.nombre || '';
-
   renderTiposUnidad();
   goScreen('s-tipos-unidad');
 }
@@ -441,6 +437,18 @@ function entrarSubmodulo(sub){
 }
 
 function goScreen(id) {
+  // Si estamos editando un tipo de proyecto y salimos de s-medicion, guardar ambientes
+  if (_tipoEditando && id !== 's-medicion') {
+    const prevScreen = document.querySelector('.screen.active');
+    if (prevScreen && prevScreen.id === 's-medicion') {
+      _guardarAmbientesEnTipo();
+    }
+  }
+  // Al volver a la lista de tipos, limpiar el estado de edición
+  if (id === 's-tipos-unidad' && _tipoEditando) {
+    _tipoEditando = null;
+    _ocultarBreadcrumb();
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-tab,.nav-cfg').forEach(t=>t.classList.remove('active'));
@@ -1644,6 +1652,7 @@ function histGetAll(){try{return JSON.parse(localStorage.getItem(HIST_KEY))||[];
 function histSetAll(arr){localStorage.setItem(HIST_KEY,JSON.stringify(arr));}
 
 function histCapturarEstado(){
+  _guardarAmbientesEnTipo(); // flush tipo activo antes de serializar
   const cfgGet=id=>{const el=document.getElementById(id);return el?el.value:'';};
   syncCliente();
   return{
