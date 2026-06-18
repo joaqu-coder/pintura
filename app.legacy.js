@@ -13,6 +13,12 @@ const S = {
   combVehCant: 0, combDias: 0, combKmDia: 0
 };
 
+// ── PROYECTO MULTI-TIPO ──
+let tiposUnidad = [];
+let _tipoEditando = null;
+const ALTURA_FACTORES = { baja: 1.00, media: 0.80, alta: 0.65 };
+const ALTURA_LABELS   = { baja: 'Baja  < 3 m', media: 'Media  3–6 m', alta: 'Alta  > 6 m' };
+
 const ROLES = [
   { id:'es', label:'Oficial Especializado', badge:'rb-es', qty:0, hora:0 },
   { id:'of', label:'Oficial',               badge:'rb-of', qty:0, hora:0 },
@@ -68,6 +74,179 @@ function calcAmbTotal(a){ return calcAmbMuroNeto(a)+calcAmbCielo(a)+calcAmbZocal
 function calcSectorVanos(s){ return getVanosTotal(s.vanos); }
 function calcSectorBruto(s){ return(s.tipo==='muro2'?s.d1*s.d2*2*s.manos:s.d1*s.d2*(s.paredes||1)*s.manos)*(s.niveles||1); }
 function calcSectorNeto(s){ return Math.max(0, calcSectorBruto(s)-((s.tipo==='muro'||s.tipo==='muro2')?calcSectorVanos(s):0)); }
+
+// ══════════════════════════════════════════════════════════════
+// ═══════════   PROYECTO — MÚLTIPLES TIPOS DE UNIDAD   ════════
+// ══════════════════════════════════════════════════════════════
+
+function addTipoUnidad() {
+  tiposUnidad.push({
+    id: nid(), label: 'Unidad tipo', tipoBase: 'casa',
+    cantidad: 1, alturaZona: 'baja',
+    ambientes: [], ambientesEdf: [],
+    m2Calculado: 0,
+  });
+  renderTiposUnidad();
+}
+
+function removeTipoUnidad(id) {
+  if (!confirm('¿Eliminar este tipo de unidad y sus ambientes?')) return;
+  tiposUnidad = tiposUnidad.filter(t => t.id !== id);
+  if (_tipoEditando && _tipoEditando.id === id) _tipoEditando = null;
+  renderTiposUnidad(); calc();
+}
+
+function tipoChange(id, key, val) {
+  const tipo = tiposUnidad.find(t => t.id === id); if (!tipo) return;
+  if (key === 'cantidad') tipo.cantidad = Math.max(1, parseInt(val) || 1);
+  else if (key === 'tipoBase') tipo.tipoBase = val;
+  else if (key === 'alturaZona') tipo.alturaZona = val;
+  else tipo[key] = val;
+  renderTiposUnidad(); calc();
+}
+
+function editarAmbientesTipo(id) {
+  // Sincronizar el tipo que estaba en edición antes de cambiar
+  if (_tipoEditando) _guardarAmbientesEnTipo();
+
+  const tipo = tiposUnidad.find(t => t.id === id); if (!tipo) return;
+  _tipoEditando = tipo;
+  S.tipoObra = tipo.tipoBase;
+
+  // Cargar los ambientes de este tipo en los globales
+  ambientes    = JSON.parse(JSON.stringify(tipo.ambientes    || []));
+  ambientesEdf = JSON.parse(JSON.stringify(tipo.ambientesEdf || []));
+
+  // Preparar la pantalla de medición según el tipoBase
+  document.getElementById('bloque-casa').style.display     = tipo.tipoBase === 'casa'     ? '' : 'none';
+  document.getElementById('bloque-edificio').style.display = tipo.tipoBase === 'edificio' ? '' : 'none';
+  document.getElementById('btn-casa')?.classList.toggle('sel', tipo.tipoBase === 'casa');
+  document.getElementById('btn-edificio')?.classList.toggle('sel', tipo.tipoBase === 'edificio');
+
+  if (tipo.tipoBase === 'edificio') { renderAmbientesEdfSelector(); renderAmbientesEdf(); }
+  else { renderAmbientesSelector(); renderAmbientes(); }
+
+  // Mostrar breadcrumb en s-medicion
+  _actualizarBreadcrumb();
+  goScreen('s-medicion'); calc();
+}
+
+function volverATipos() {
+  _guardarAmbientesEnTipo();
+  _tipoEditando = null;
+  _ocultarBreadcrumb();
+  goScreen('s-tipos-unidad');
+  renderTiposUnidad(); calc();
+}
+
+function _guardarAmbientesEnTipo() {
+  if (!_tipoEditando) return;
+  _tipoEditando.ambientes    = JSON.parse(JSON.stringify(ambientes));
+  _tipoEditando.ambientesEdf = JSON.parse(JSON.stringify(ambientesEdf));
+}
+
+function _actualizarBreadcrumb() {
+  const hdr = document.getElementById('medicion-tipo-header'); if (!hdr) return;
+  const tipo = _tipoEditando;
+  hdr.style.display = '';
+  hdr.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px 0">
+      <button onclick="volverATipos()" style="background:var(--bg-elevated);border:1px solid var(--border-2);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text-secondary);font-family:inherit">← Tipos</button>
+      <span style="font-size:11px;color:var(--text-tertiary)">Editando <strong style="color:var(--accent)">${tipo.label}</strong> · × ${tipo.cantidad} · <span style="color:${tipo.alturaZona==='alta'?'#e67e22':tipo.alturaZona==='media'?'#9b59b6':'var(--text-secondary)'}">${ALTURA_LABELS[tipo.alturaZona||'baja']}</span></span>
+    </div>`;
+}
+
+function _ocultarBreadcrumb() {
+  const hdr = document.getElementById('medicion-tipo-header');
+  if (hdr) hdr.style.display = 'none';
+}
+
+function renderTiposUnidad() {
+  const c = document.getElementById('tipos-unidad-container'); if (!c) return;
+  if (tiposUnidad.length === 0) {
+    c.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--text-tertiary);font-size:13px;line-height:1.6">
+      No hay tipos definidos aún.<br>Presioná <strong style="color:var(--accent)">+ Agregar tipo</strong> para empezar.
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  let totalProyecto = 0;
+
+  tiposUnidad.forEach(tipo => {
+    const factor  = ALTURA_FACTORES[tipo.alturaZona || 'baja'];
+    const m2Unit  = tipo.m2Calculado || 0;
+    const m2Total = m2Unit * tipo.cantidad * factor;
+    totalProyecto += m2Total;
+    const editando = _tipoEditando && _tipoEditando.id === tipo.id;
+
+    html += `<div class="amb-block" style="margin-bottom:12px${editando?';border-color:var(--accent)':''}">
+      <div class="amb-head" style="margin-bottom:10px">
+        <input type="text" value="${tipo.label}"
+          style="background:transparent;border:none;color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1;min-width:0;outline:none;font-family:'Manrope',sans-serif;padding:0"
+          oninput="tipoChange(${tipo.id},'label',this.value)">
+        <button class="btn-rm" onclick="removeTipoUnidad(${tipo.id})">×</button>
+      </div>
+
+      <div class="row3" style="margin-bottom:10px">
+        <div class="fg" style="margin-bottom:0">
+          <label>Tipo</label>
+          <div class="tg-group">
+            <button class="tg-btn ${tipo.tipoBase==='casa'?'on':''}" onclick="tipoChange(${tipo.id},'tipoBase','casa')">Casa</button>
+            <button class="tg-btn ${tipo.tipoBase==='edificio'?'on':''}" onclick="tipoChange(${tipo.id},'tipoBase','edificio')">Edif.</button>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>Cantidad</label>
+          <div class="input-wrap">
+            <input type="number" value="${tipo.cantidad}" min="1" step="1" inputmode="numeric"
+              oninput="tipoChange(${tipo.id},'cantidad',this.value)">
+            <span class="input-unit">u</span>
+          </div>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>Altura</label>
+          <select onchange="tipoChange(${tipo.id},'alturaZona',this.value)">
+            ${Object.entries(ALTURA_LABELS).map(([k,v])=>`<option value="${k}" ${tipo.alturaZona===k?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="sup-row" style="margin-bottom:10px">
+        <div class="sup-chip"><span class="sl">m² / unidad</span><span class="sv">${fm2(m2Unit)}</span></div>
+        <div class="sup-chip"><span class="sl">× ${tipo.cantidad} · factor ${factor.toFixed(2)}</span><span class="sv">${fm2(m2Total)}</span></div>
+      </div>
+
+      <button onclick="editarAmbientesTipo(${tipo.id})"
+        style="width:100%;background:${editando?'var(--accent)':'var(--bg-elevated)'};border:1px solid var(--accent);border-radius:6px;padding:9px;font-size:11px;font-weight:700;color:${editando?'#000':'var(--accent)'};cursor:pointer;font-family:inherit;letter-spacing:.3px">
+        ${editando ? '✏ Editando ambientes…' : 'Editar ambientes →'}
+      </button>
+    </div>`;
+  });
+
+  html += `<div class="sup-total-chip" style="margin-top:8px">
+    <span class="sl">Total general del proyecto</span>
+    <span class="sv" id="tipos-total-m2">${fm2(totalProyecto)}</span>
+  </div>`;
+
+  c.innerHTML = html;
+}
+
+function entrarModoProyecto() {
+  const hb = document.getElementById('nav-hist-btn'); if (hb) hb.style.display = '';
+  const fab = document.getElementById('fab-btn');
+  if (fab) { fab.style.display = ''; fab.onclick = () => openModal(); fab.innerHTML = 'Cotización <span class="fab-price" id="fab-price">Calcular</span>'; }
+  setActiveModule('pintura');
+  showSectionNav(true);
+  ['tab-s-tipos-unidad','tab-s-cuadrilla','tab-s-costos','tab-s-precio'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = '';
+  });
+  ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  renderTiposUnidad();
+  goScreen('s-tipos-unidad');
+}
 
 // ── COLAPSABLE ──
 function toggleCard(head) {
@@ -139,17 +318,19 @@ function entrarModulo(modulo){
   showSectionNav(true);
 
   if(modulo==='pintura'){
-    // Barra inferior: solo Cuadrilla · Costos · Precio (Medición es parte del flujo de entrada, no una pestaña)
+    // Barra inferior: solo Cuadrilla · Costos · Precio (Medición y Tipos son parte del flujo de entrada)
     ['tab-s-cuadrilla','tab-s-costos','tab-s-precio'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='';
     });
-    // Ocultar "Medición" y "Obra" de la barra, y secciones de otros módulos
-    ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio'].forEach(id=>{
+    // Ocultar tabs que no corresponden al modo pintura normal
+    ['tab-s-medicion','tab-s-obra','tab-s-jornales','tab-s-pjornales','tab-s-pj-cuadrilla','tab-s-pj-costos','tab-s-pj-precio','tab-s-tipos-unidad'].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display='none';
     });
     // FAB modo cotización
     const fab=document.getElementById('fab-btn');
     if(fab){fab.onclick=()=>openModal();fab.innerHTML='Cotización <span class="fab-price" id="fab-price">Calcular</span>';}
+    // Limpiar estado de proyecto si se vuelve al flujo simple
+    if (S.tipoObra === 'proyecto') { S.tipoObra = null; _tipoEditando = null; _ocultarBreadcrumb(); }
     goScreen('s-obra');
   } else if(modulo==='obra'){
     entrarSubmodulo('jornales-ppto');
@@ -191,6 +372,12 @@ function goScreen(id) {
 
 // ── TIPO OBRA ──
 function selectObra(tipo, advance=true) {
+  if (tipo === 'proyecto') {
+    S.tipoObra = 'proyecto';
+    tiposUnidad = tiposUnidad.length > 0 ? tiposUnidad : [];
+    entrarModoProyecto();
+    return;
+  }
   S.tipoObra=tipo;
   document.getElementById('btn-casa').classList.toggle('sel',tipo==='casa');
   document.getElementById('btn-edificio').classList.toggle('sel',tipo==='edificio');
@@ -1089,7 +1276,28 @@ function _syncCfgCosto(tipo,cfgKey,nombre,monto){
 // ── CÁLCULO PRINCIPAL ──
 function calc(){
   let supMuroBruto=0,supCielo=0,paredesCount=0;
-  if(S.tipoObra==='casa'){
+  if(S.tipoObra==='proyecto'){
+    // ── Modo proyecto: suma tipos × cantidad × factor altura ──
+    // Actualizar m2Calculado de cada tipo leyendo sus ambientes
+    tiposUnidad.forEach(tipo => {
+      let m2u = 0;
+      (tipo.ambientes || []).forEach(a => { m2u += calcAmbTotal(a); });
+      (tipo.ambientesEdf || []).forEach(a => { m2u += calcAmbEdfTotal(a); });
+      tipo.m2Calculado = m2u;
+      const factor = ALTURA_FACTORES[tipo.alturaZona || 'baja'];
+      supMuroBruto += m2u * tipo.cantidad * factor;
+    });
+    renderTiposUnidad();
+    // Si está editando un tipo, actualizar el breadcrumb
+    if (_tipoEditando) {
+      // Sincronizar m2 del tipo en edición con los ambientes globales actuales
+      let m2act = 0;
+      ambientes.forEach(a => { m2act += calcAmbTotal(a); });
+      ambientesEdf.forEach(a => { m2act += calcAmbEdfTotal(a); });
+      _tipoEditando.m2Calculado = m2act;
+      _actualizarBreadcrumb();
+    }
+  } else if(S.tipoObra==='casa'){
     ambientes.forEach(a=>{
       const isFachada=a.tipo==='Fachadas / muros exteriores';
       const muroNeto=calcAmbMuroNeto(a);const cielo=calcAmbCielo(a);
@@ -1365,6 +1573,8 @@ function histCapturarEstado(){
     // ── Presupuesto Jornales ──
     _pjState: (typeof PJ !== 'undefined') ? JSON.parse(JSON.stringify(PJ)) : null,
     _pjLastCalc: window._pjLastCalc||{},
+    // ── Proyecto multi-tipo ──
+    tiposUnidad: JSON.parse(JSON.stringify(tiposUnidad)),
     // ── Config nuevos campos ──
     _cfgAlmuerzo:    cfgGet('cfg-almuerzo'),
     _cfgTanqueL:     cfgGet('cfg-tanque-l'),
@@ -1477,9 +1687,15 @@ function histRestaurarEstado(estado){
     if(typeof pjCalc==='function') pjCalc();
   }
 
+  // ── Restaurar proyecto multi-tipo ──
+  tiposUnidad = JSON.parse(JSON.stringify(estado.tiposUnidad || []));
+  _tipoEditando = null;
+
   // ── Navegación al módulo correcto según el tipo de presupuesto guardado ──
   const tipoGuardado = (estado.S && estado.S.tipoObra) || null;
-  if(tipoGuardado==='casa' || tipoGuardado==='edificio'){
+  if(tipoGuardado==='proyecto'){
+    entrarModoProyecto();
+  } else if(tipoGuardado==='casa' || tipoGuardado==='edificio'){
     if(typeof entrarModulo==='function') entrarModulo('pintura');
   } else if(estado._pjState){
     if(typeof entrarSubmodulo==='function') entrarSubmodulo('jornales-ppto');

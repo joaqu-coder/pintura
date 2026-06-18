@@ -107,13 +107,40 @@
           <div class="ol">Edificio</div>
           <div class="od">PH / Escalera</div>
         </div>
+        <div class="obra-btn" id="btn-proyecto" onclick="selectObra('proyecto')" style="grid-column:1/-1">
+          <div class="ol">Proyecto</div>
+          <div class="od">Barrio · múltiples tipos de unidad</div>
+        </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN — TIPOS DE UNIDAD (modo Proyecto) ══ -->
+<div class="screen" id="s-tipos-unidad">
+  <div class="card">
+    <div class="card-head open" onclick="toggleCard(this)">
+      <div class="card-num" style="background:var(--accent)">P</div>
+      <span class="card-title">Tipos de unidad</span>
+      <span class="card-chevron open">▾</span>
+    </div>
+    <div class="card-body" id="tipos-unidad-container">
+      <!-- renderTiposUnidad() -->
+    </div>
+    <div style="padding:0 16px 16px">
+      <button onclick="addTipoUnidad()"
+        style="width:100%;background:var(--bg-elevated);border:1px dashed var(--border-2);border-radius:8px;padding:12px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;font-family:inherit;letter-spacing:.3px">
+        + Agregar tipo
+      </button>
     </div>
   </div>
 </div>
 
 <!-- ══ SCREEN 2 — MEDICIÓN ══ -->
 <div class="screen" id="s-medicion">
+
+  <!-- Breadcrumb modo Proyecto (oculto por defecto) -->
+  <div id="medicion-tipo-header" style="display:none"></div>
 
   <!-- CASA -->
   <div id="bloque-casa">
@@ -785,9 +812,10 @@
 <!-- ══ SECTION NAV (barra inferior — secciones del módulo) ══ -->
 <nav class="section-nav" id="section-nav" style="display:none">
   <div class="section-tabs" id="nav-tabs">
-    <button class="nav-tab" onclick="goScreen('s-obra')"        id="tab-s-obra"         style="display:none">Obra</button>
-    <button class="nav-tab" onclick="goScreen('s-medicion')"    id="tab-s-medicion"     style="display:none">Medición</button>
-    <button class="nav-tab" onclick="goScreen('s-cuadrilla')"   id="tab-s-cuadrilla"    style="display:none">Cuadrilla</button>
+    <button class="nav-tab" onclick="goScreen('s-obra')"          id="tab-s-obra"           style="display:none">Obra</button>
+    <button class="nav-tab" onclick="goScreen('s-tipos-unidad')" id="tab-s-tipos-unidad"   style="display:none">Tipos</button>
+    <button class="nav-tab" onclick="goScreen('s-medicion')"     id="tab-s-medicion"       style="display:none">Medición</button>
+    <button class="nav-tab" onclick="goScreen('s-cuadrilla')"    id="tab-s-cuadrilla"      style="display:none">Cuadrilla</button>
     <button class="nav-tab" onclick="goScreen('s-costos')"      id="tab-s-costos"       style="display:none">Costos</button>
     <button class="nav-tab" onclick="goScreen('s-precio')"      id="tab-s-precio"       style="display:none">Precio</button>
     <button class="nav-tab" onclick="goScreen('s-pjornales')"   id="tab-s-pjornales"    style="display:none">Presupuesto</button>
