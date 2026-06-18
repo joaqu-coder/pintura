@@ -1,0 +1,30 @@
+name: Actualizar escala UOCRA
+
+on:
+  schedule:
+    - cron: "0 8 1 * *"   # 1° de cada mes a las 08:00 UTC
+  workflow_dispatch:       # ejecución manual desde GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4
+
+      - name: Ejecutar scraper
+        run: python scripts/scrape_uocra.py
+
+      - name: Commit si hubo cambios
+        run: |
+          git config user.name  "uocra-bot"
+          git config user.email "bot@antigravity.local"
+          git add data/uocra-salta.json
+          git diff --cached --quiet || git commit -m "[bot] Actualizar escala UOCRA $(date +'%Y-%m')"
+          git push

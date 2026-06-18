@@ -735,6 +735,10 @@
     <div class="card-body">
       <div class="cfg-section">
         <div class="cfg-head">Escala de Jornales (valor/hora $)</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <button id="cfg-uocra-btn" onclick="cargarUOCRA()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.3px">Cargar UOCRA Zona A</button>
+          <span id="cfg-uocra-info" style="font-size:10px;color:var(--text-tertiary)">Valores manuales activos — presioná para cargar desde archivo.</span>
+        </div>
         <div id="cfg-jornales"></div>
       </div>
       <div class="cfg-section">

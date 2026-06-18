@@ -48,7 +48,12 @@ function getVanosTotal(vanos){
 }
 function calcAmbMuroBruto(a){
   const isFachada = a.tipo === 'Fachadas / muros exteriores';
-  return isFachada ? (a.ml*a.alt) : (a.ml*a.alt*a.paredes);
+  if(isFachada){
+    if(a.panos && a.panos.length > 0)
+      return a.panos.reduce((s,p)=>s+(p.ancho||0)*(p.alto||0),0);
+    return (a.ml||0)*(a.alt||0); // compat historial sin panos
+  }
+  return a.ml*a.alt*a.paredes;
 }
 function calcAmbCielo(a){
   const isFachada = a.tipo === 'Fachadas / muros exteriores';
@@ -234,13 +239,33 @@ function renderAmbientesSelector(){
   });
 }
 function addAmbiente(tipo) {
+  const isFachada = tipo === 'Fachadas / muros exteriores';
   ambientes.push({
     id:nid(), tipo, ml:0, largoCielo:0, alt:2.70,
-    paredes:tipo==='Fachadas / muros exteriores'?1:4, anchoCielo:0, vanos:[],
+    paredes:isFachada?1:4, anchoCielo:0, vanos:[],
+    panos: isFachada ? [{id:nid(), ancho:0, alto:2.70}] : [],
     conZocalo:false, zocLargo:0, zocAlto:0.15, zocMaterial:'Madera',
     conBaranda:false, barLargo:0, barAlto:1.0, barMaterial:'Metálica'
   });
   renderAmbientes();
+}
+function addPano(ambId){
+  const a=ambientes.find(a=>a.id===ambId);if(!a)return;
+  if(!Array.isArray(a.panos))a.panos=[];
+  a.panos.push({id:nid(),ancho:0,alto:2.70});renderAmbientes();
+}
+function removePano(ambId,panoId){
+  const a=ambientes.find(a=>a.id===ambId);if(!a||!Array.isArray(a.panos))return;
+  if(a.panos.length<=1){return;} // al menos un paño
+  a.panos=a.panos.filter(p=>p.id!==panoId);renderAmbientes();calc();
+}
+function panoChange(ambId,panoId,key,val){
+  const a=ambientes.find(a=>a.id===ambId);if(!a||!Array.isArray(a.panos))return;
+  const p=a.panos.find(p=>p.id===panoId);if(!p)return;
+  p[key]=parseFloat(String(val).replace(',','.'))||0;
+  const sub=document.getElementById(`pano-sub-${a.id}-${p.id}`);
+  if(sub)sub.textContent=fm2((p.ancho||0)*(p.alto||0));
+  calcAmb(a.id);calc();
 }
 function addAmbVano(ambId){
   const a=ambientes.find(a=>a.id===ambId); if(!a)return;
@@ -303,17 +328,32 @@ function renderAmbientes() {
     const totalAmb=Math.max(0,calcAmbTotal(a));
 
     const bodyHtml = a.abierto ? `
+      ${isFachada ? `
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px">Paños de fachada</div>
+      ${(a.panos||[]).map(p=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
+        <div class="row2" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" inputmode="decimal" value="${p.ancho||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'ancho',this.value)"></div>
+          <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${p.alto||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'alto',this.value)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--text-tertiary)">Paño: <span id="pano-sub-${a.id}-${p.id}">${fm2((p.ancho||0)*(p.alto||0))}</span></span>
+          <button class="btn-rm" onclick="removePano(${a.id},${p.id})" ${(a.panos||[]).length<=1?'style="visibility:hidden"':''}>×</button>
+        </div>
+      </div>`).join('')}
+      <button class="btn-add" onclick="addPano(${a.id})">+ Agregar paño</button>
+      ` : `
       <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px">Muros</div>
       <div class="row3" style="margin-bottom:10px">
         <div class="fg" style="margin-bottom:0"><label>Largo (m)</label><input type="number" value="${a.ml}" min="0" step="0.1" oninput="ambChange(${a.id},'ml',this.value)"></div>
         <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" value="${a.alt}" min="0" step="0.1" oninput="ambChange(${a.id},'alt',this.value)"></div>
-        ${!isFachada?`<div class="fg" style="margin-bottom:0"><label>Paredes</label><input type="number" value="${a.paredes}" min="1" step="1" oninput="ambChange(${a.id},'paredes',this.value)"></div>`:''}
+        <div class="fg" style="margin-bottom:0"><label>Paredes</label><input type="number" value="${a.paredes}" min="1" step="1" oninput="ambChange(${a.id},'paredes',this.value)"></div>
       </div>
-      ${!isFachada?`<div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Cielorraso</div>
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Cielorraso</div>
       <div class="row2" style="margin-bottom:10px">
         <div class="fg" style="margin-bottom:0"><label>Largo (m)</label><input type="number" id="amb-lcielo-${a.id}" value="${a.largoCielo!==undefined?a.largoCielo:a.ml}" min="0" step="0.1" oninput="ambChange(${a.id},'largoCielo',this.value)"></div>
         <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" value="${a.anchoCielo}" min="0" step="0.1" oninput="ambChange(${a.id},'anchoCielo',this.value)"></div>
-      </div>`:''}
+      </div>
+      `}
       <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Descuento de vanos</div>
       ${(a.vanos||[]).map(v=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
         <div class="row2" style="margin-bottom:8px">
@@ -331,11 +371,11 @@ function renderAmbientes() {
       </div>`).join('')}
       <button class="btn-add" onclick="addAmbVano(${a.id})">+ Agregar vano</button>
       <div class="sup-row" style="margin-top:10px">
-        <div class="sup-chip"><span class="sl">Muro bruto</span><span class="sv" id="amb-muro-${a.id}">${fm2(muroBruto)}</span></div>
+        <div class="sup-chip"><span class="sl">${isFachada?'Total paños':'Muro bruto'}</span><span class="sv" id="amb-muro-${a.id}">${fm2(muroBruto)}</span></div>
         <div class="sup-chip"><span class="sl">Vanos</span><span class="sv" id="amb-vanos-${a.id}">${fm2(vanosTotal)}</span></div>
       </div>
       <div class="sup-total-chip" style="margin-top:8px">
-        <span class="sl">Muro neto</span>
+        <span class="sl">${isFachada?'Superficie neta':'Muro neto'}</span>
         <span class="sv" id="amb-neto-${a.id}">${fm2(muroNeto)}</span>
       </div>
 
@@ -430,15 +470,35 @@ function renderAmbientesEdfSelector(){
 }
 
 function addAmbienteEdf(tipo){
+  const isFachada = tipo === 'Fachada';
   ambientesEdf.push({
     id:nid(), tipo, ml:0, largoCielo:0, alt:2.70,
-    paredes:4, anchoCielo:0, vanos:[],
+    paredes:isFachada?1:4, anchoCielo:0, vanos:[],
+    panos: isFachada ? [{id:nid(), ancho:0, alto:2.70}] : [],
     niveles:1,
     conZocalo:false, zocLargo:0, zocAlto:0.15, zocMaterial:'Madera',
     conBaranda:false, barLargo:0, barAlto:1.0, barMaterial:'Metálica',
     abierto:false
   });
   renderAmbientesEdf();
+}
+function addPanoEdf(ambId){
+  const a=ambientesEdf.find(a=>a.id===ambId);if(!a)return;
+  if(!Array.isArray(a.panos))a.panos=[];
+  a.panos.push({id:nid(),ancho:0,alto:2.70});renderAmbientesEdf();
+}
+function removePanoEdf(ambId,panoId){
+  const a=ambientesEdf.find(a=>a.id===ambId);if(!a||!Array.isArray(a.panos))return;
+  if(a.panos.length<=1)return;
+  a.panos=a.panos.filter(p=>p.id!==panoId);renderAmbientesEdf();calc();
+}
+function panoEdfChange(ambId,panoId,key,val){
+  const a=ambientesEdf.find(a=>a.id===ambId);if(!a||!Array.isArray(a.panos))return;
+  const p=a.panos.find(p=>p.id===panoId);if(!p)return;
+  p[key]=parseFloat(String(val).replace(',','.'))||0;
+  const sub=document.getElementById(`panoedf-sub-${a.id}-${p.id}`);
+  if(sub)sub.textContent=fm2((p.ancho||0)*(p.alto||0)*(a.niveles||1));
+  calcAmbEdf(a.id);calc();
 }
 
 function removeAmbienteEdf(id){ambientesEdf=ambientesEdf.filter(a=>a.id!==id);renderAmbientesEdf();calc();}
@@ -459,7 +519,12 @@ function ambEdfChange(id,key,val){
   calcAmbEdf(id);calc();
 }
 
-function calcAmbEdfMuroBruto(a){ return a.ml*a.alt*a.paredes*(a.niveles||1); }
+function calcAmbEdfMuroBruto(a){
+  const isFachada = a.tipo === 'Fachada';
+  if(isFachada && a.panos && a.panos.length > 0)
+    return a.panos.reduce((s,p)=>s+(p.ancho||0)*(p.alto||0),0)*(a.niveles||1);
+  return a.ml*a.alt*a.paredes*(a.niveles||1);
+}
 function calcAmbEdfCielo(a){ const lc=a.largoCielo!==undefined?a.largoCielo:a.ml; return lc*a.anchoCielo*(a.niveles||1); }
 function calcAmbEdfVanos(a){ return getVanosTotal(a.vanos)*(a.niveles||1); }
 function calcAmbEdfMuroNeto(a){ return Math.max(0,calcAmbEdfMuroBruto(a)-calcAmbEdfVanos(a)); }
@@ -509,7 +574,23 @@ function renderAmbientesEdf(){
     const totalAmb=Math.max(0,calcAmbEdfTotal(a));
     const div=document.createElement('div');div.className='amb-block';
 
+    const isFachadaEdf = a.tipo === 'Fachada';
     const bodyHtml=a.abierto?`
+      ${isFachadaEdf ? `
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px">Paños de fachada</div>
+      ${(a.panos||[]).map(p=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
+        <div class="row2" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" inputmode="decimal" value="${p.ancho||0}" min="0" step="0.01" oninput="panoEdfChange(${a.id},${p.id},'ancho',this.value)"></div>
+          <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${p.alto||0}" min="0" step="0.01" oninput="panoEdfChange(${a.id},${p.id},'alto',this.value)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span style="font-size:10px;color:var(--text-tertiary)">Paño × ${a.niveles||1} nivel(es): <span id="panoedf-sub-${a.id}-${p.id}">${fm2((p.ancho||0)*(p.alto||0)*(a.niveles||1))}</span></span>
+          <button class="btn-rm" onclick="removePanoEdf(${a.id},${p.id})" ${(a.panos||[]).length<=1?'style="visibility:hidden"':''}>×</button>
+        </div>
+      </div>`).join('')}
+      <button class="btn-add" onclick="addPanoEdf(${a.id})">+ Agregar paño</button>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label>Niveles / pisos</label><input type="number" value="${a.niveles||1}" min="1" step="1" oninput="ambEdfChange(${a.id},'niveles',this.value)"></div>
+      ` : `
       <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px">Muros</div>
       <div class="row3" style="margin-bottom:10px">
         <div class="fg" style="margin-bottom:0"><label>Largo (m)</label><input type="number" value="${a.ml}" min="0" step="0.1" oninput="ambEdfChange(${a.id},'ml',this.value)"></div>
@@ -522,6 +603,7 @@ function renderAmbientesEdf(){
         <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" value="${a.anchoCielo}" min="0" step="0.1" oninput="ambEdfChange(${a.id},'anchoCielo',this.value)"></div>
         <div class="fg" style="margin-bottom:0"><label>Niveles / pisos</label><input type="number" value="${a.niveles||1}" min="1" step="1" oninput="ambEdfChange(${a.id},'niveles',this.value)"></div>
       </div>
+      `}
       <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Vanos</div>
       ${(a.vanos||[]).map(v=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
         <div class="row2" style="margin-bottom:8px">
@@ -539,11 +621,11 @@ function renderAmbientesEdf(){
       </div>`).join('')}
       <button class="btn-add" onclick="addAmbEdfVano(${a.id})">+ Agregar vano</button>
       <div class="sup-row" style="margin-top:10px">
-        <div class="sup-chip"><span class="sl">Muro bruto</span><span class="sv" id="ambedf-muro-${a.id}">${fm2(muroBruto)}</span></div>
+        <div class="sup-chip"><span class="sl">${isFachadaEdf?'Total paños':'Muro bruto'}</span><span class="sv" id="ambedf-muro-${a.id}">${fm2(muroBruto)}</span></div>
         <div class="sup-chip"><span class="sl">Vanos</span><span class="sv" id="ambedf-vanos-${a.id}">${fm2(vanosTotal)}</span></div>
       </div>
       <div class="sup-total-chip" style="margin-top:8px">
-        <span class="sl">Muro neto</span>
+        <span class="sl">${isFachadaEdf?'Superficie neta':'Muro neto'}</span>
         <span class="sv" id="ambedf-neto-${a.id}">${fm2(muroNeto)}</span>
       </div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -940,9 +1022,38 @@ function renderCfgJornales(){
   ROLES.forEach((r,i)=>{
     const row=document.createElement('div');row.className='cfg-row';
     row.innerHTML=`<div><div class="cfg-label">${r.label}</div><div class="cfg-sub">$/hora</div></div>
-      <input type="text" inputmode="numeric" value="${fmNum(r.hora)}" oninput="cfgRoleChange(${i},formatInputMoneda(this))">`;
+      <input type="text" inputmode="numeric" id="cfg-role-hora-${r.id}" value="${fmNum(r.hora)}" oninput="cfgRoleChange(${i},formatInputMoneda(this))">`;
     c.appendChild(row);
   });
+}
+
+async function cargarUOCRA(){
+  const btn=document.getElementById('cfg-uocra-btn');
+  const info=document.getElementById('cfg-uocra-info');
+  if(btn)btn.disabled=true;
+  if(info)info.textContent='Cargando…';
+  try{
+    const res=await fetch('/data/uocra-salta.json?_='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    (data.roles||[]).forEach(r=>{
+      const roleIdx=ROLES.findIndex(x=>x.id===r.id);
+      if(roleIdx<0)return;
+      ROLES[roleIdx].hora=r.hora;
+      const inp=document.getElementById('cfg-role-hora-'+r.id);
+      if(inp)inp.value=fmNum(r.hora);
+      const ce=document.getElementById('role-calc-'+roleIdx);
+      if(ce)ce.textContent=`Valor/hora: ${fmtm(r.hora)} · Jornada: ${fmtm(r.hora*8)}`;
+    });
+    const vig=data.vigencia||'—';
+    const fte=data.fuente==='manual'?'valores manuales de respaldo':'uocra.net';
+    if(info)info.textContent=`✓ Vigencia ${vig} · Fuente: ${fte}`;
+    calc();
+  }catch(e){
+    if(info)info.textContent='Error: '+e.message+' — ejecutá scripts/scrape_uocra.py primero.';
+  }finally{
+    if(btn)btn.disabled=false;
+  }
 }
 function cfgRoleChange(i,val){
   ROLES[i].hora=parseFloat(val)||0;
@@ -1137,13 +1248,21 @@ function openModal(){
     medHTML=ambientes.map(a=>{
       const mn=calcAmbMuroNeto(a).toFixed(2).replace('.',',');
       const ci=calcAmbCielo(a).toFixed(2).replace('.',',');
-      return`<div class="res-row"><span class="rl">${a.tipo||'Ambiente'}</span><span class="rv">${mn} m² muro · ${ci} m² cielo · ${a.paredes} pared${a.paredes!==1?'es':''}</span></div>`;
+      const isFachada=a.tipo==='Fachadas / muros exteriores';
+      const detalle=isFachada
+        ?`${(a.panos||[]).length} paño${(a.panos||[]).length!==1?'s':''}`
+        :`${a.paredes} pared${a.paredes!==1?'es':''}`;
+      return`<div class="res-row"><span class="rl">${a.tipo||'Ambiente'}</span><span class="rv">${mn} m² muro · ${ci} m² cielo · ${detalle}</span></div>`;
     }).join('');
   } else if(S.tipoObra==='edificio'&&ambientesEdf.length>0){
     medHTML=ambientesEdf.map(a=>{
       const mn=calcAmbEdfMuroNeto(a).toFixed(2).replace('.',',');
       const ci=calcAmbEdfCielo(a).toFixed(2).replace('.',',');
-      return`<div class="res-row"><span class="rl">${a.tipo||'Espacio'}</span><span class="rv">${mn} m² muro · ${ci} m² cielo</span></div>`;
+      const isFachadaEdf=a.tipo==='Fachada';
+      const detalle=isFachadaEdf
+        ?`${(a.panos||[]).length} paño${(a.panos||[]).length!==1?'s':''}`
+        :'';
+      return`<div class="res-row"><span class="rl">${a.tipo||'Espacio'}</span><span class="rv">${mn} m² muro · ${ci} m² cielo${detalle?' · '+detalle:''}</span></div>`;
     }).join('');
   }
 
