@@ -18,3 +18,7 @@ Desktop.ini
 # Cachés y temporales
 .cache/
 *.tmp
+
+# Python
+__pycache__/
+*.pyc
