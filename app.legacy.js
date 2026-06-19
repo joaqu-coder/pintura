@@ -174,9 +174,6 @@ function _guardarAmbientesEnTipo() {
 function _actualizarBreadcrumb() {
   const hdr = document.getElementById('medicion-tipo-header'); if (!hdr) return;
   const tipo = _tipoEditando;
-  const alt  = parseFloat(tipo.alturaMetros) || 2.70;
-  const zon  = etiquetaAltura(alt);
-  const col  = alt > 6 ? '#e67e22' : alt > 3 ? '#9b59b6' : 'var(--text-secondary)';
   hdr.style.display = '';
   hdr.innerHTML = `
     <div style="background:var(--bg-elevated);border-bottom:1px solid var(--border-2);padding:10px 16px;display:flex;align-items:center;gap:10px">
@@ -187,7 +184,6 @@ function _actualizarBreadcrumb() {
       <span style="font-size:11px;color:var(--text-tertiary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         <strong style="color:var(--accent)">${tipo.label}</strong>
         <span style="margin:0 4px">·</span>×&nbsp;${tipo.cantidad}
-        <span style="margin:0 4px">·</span><span style="color:${col}">${alt.toFixed(2)}&nbsp;m (${zon})</span>
       </span>
     </div>`;
 }
@@ -200,10 +196,6 @@ function _ocultarBreadcrumb() {
 function renderTiposUnidad() {
   const c = document.getElementById('tipos-unidad-container'); if (!c) return;
 
-  // Botón "continuar" - visible cuando hay al menos un tipo
-  const btnCont = document.getElementById('btn-continuar-proyecto');
-  if (btnCont) btnCont.style.display = tiposUnidad.length > 0 ? '' : 'none';
-
   if (tiposUnidad.length === 0) {
     c.innerHTML = `<div style="text-align:center;padding:28px 16px;color:var(--text-tertiary);font-size:13px;line-height:1.6">
       Sin tipos definidos.<br>Presioná <strong style="color:var(--accent)">+ Agregar tipo</strong> para empezar.
@@ -215,12 +207,8 @@ function renderTiposUnidad() {
   let totalProyecto = 0;
 
   tiposUnidad.forEach(tipo => {
-    const alt     = parseFloat(tipo.alturaMetros) || 2.70;
-    const factor  = calcFactorAltura(alt);
-    const zon     = etiquetaAltura(alt);
-    const colZon  = alt > 6 ? '#e67e22' : alt > 3 ? '#9b59b6' : 'var(--text-secondary)';
     const m2Unit  = tipo.m2Calculado || 0;
-    const m2Total = m2Unit * tipo.cantidad * factor;
+    const m2Total = m2Unit * tipo.cantidad;
     totalProyecto += m2Total;
     const editando = _tipoEditando && _tipoEditando.id === tipo.id;
     const labelEsc = (tipo.label || '').replace(/"/g, '&quot;');
@@ -238,8 +226,8 @@ function renderTiposUnidad() {
         <button class="btn-rm" onclick="removeTipoUnidad(${tipo.id})" title="Eliminar">×</button>
       </div>
 
-      <!-- Tipo / Cant / Altura -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <!-- Tipo / Cantidad -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div class="fg" style="margin-bottom:0">
           <label>Tipo</label>
           <div class="tg-group">
@@ -258,21 +246,6 @@ function renderTiposUnidad() {
             <span class="input-unit">u</span>
           </div>
         </div>
-        <div class="fg" style="margin-bottom:0">
-          <label>Altura (m)</label>
-          <div class="input-wrap">
-            <input type="number" value="${alt.toFixed(2)}" min="0.5" max="50" step="0.05" inputmode="decimal"
-              style="text-align:right"
-              onchange="tipoChange(${tipo.id},'alturaMetros',this.value)">
-            <span class="input-unit">m</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Info altura -->
-      <div style="font-size:10px;color:${colZon};font-weight:700;margin-bottom:10px;letter-spacing:.3px">
-        ${zon.toUpperCase()} · factor de rendimiento ${factor.toFixed(2)}
-        <span style="color:var(--text-tertiary);font-weight:400;margin-left:6px">(baja ≤3m · media 3–6m · alta >6m)</span>
       </div>
 
       <!-- m² resumen -->
@@ -282,7 +255,7 @@ function renderTiposUnidad() {
           <span class="sv">${m2Unit > 0 ? fm2(m2Unit) : '—'}</span>
         </div>
         <div class="sup-chip">
-          <span class="sl">× ${tipo.cantidad} · ×${factor.toFixed(2)}</span>
+          <span class="sl">× ${tipo.cantidad}</span>
           <span class="sv">${m2Total > 0 ? fm2(m2Total) : '—'}</span>
         </div>
       </div>
@@ -298,10 +271,8 @@ function renderTiposUnidad() {
   // Totales por tipología + total general
   html += `<div style="margin-top:4px">`;
   tiposUnidad.forEach(tipo => {
-    const alt    = parseFloat(tipo.alturaMetros) || 2.70;
-    const factor = calcFactorAltura(alt);
     const m2u    = tipo.m2Calculado || 0;
-    const m2t    = m2u * tipo.cantidad * factor;
+    const m2t    = m2u * tipo.cantidad;
     if (m2t > 0) {
       html += `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);padding:3px 0">
         <span>${tipo.label} × ${tipo.cantidad}</span>
@@ -1387,8 +1358,7 @@ function calc(){
       ambs.forEach(a    => { m2u += calcAmbTotal(a); });
       ambsEdf.forEach(a => { m2u += calcAmbEdfTotal(a); });
       tipo.m2Calculado = m2u;
-      const factor = calcFactorAltura(tipo.alturaMetros);
-      supMuroBruto += m2u * tipo.cantidad * factor;
+      supMuroBruto += m2u * tipo.cantidad;
     });
     renderTiposUnidad();
     if (_tipoEditando) _actualizarBreadcrumb();
@@ -3262,7 +3232,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Inicializar módulo jornales
   jInit();
   jRender();
-  // Iniciar en pantalla Home — el saludo dinámico y las tarjetas se cargan
-  // recién cuando el usuario toca el botón "Joaquïn" del topbar (goHome()).
+  // Iniciar en pantalla Home con el saludo dinámico, las tarjetas de info
+  // y la actividad reciente ya cargadas (sin tener que tocar el logo).
+  if(typeof renderHome==='function') renderHome();
   const fab=document.getElementById('fab-btn');if(fab)fab.style.display='none';
 });
