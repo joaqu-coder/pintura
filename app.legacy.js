@@ -57,10 +57,15 @@ function getVanosTotal(vanos){
 function fachadaFactor(a){
   return (a.tipo === 'Fachadas / muros exteriores' && a.frenteIgual) ? 2 : 1;
 }
-// Título de cada paño de fachada. Si frente y contrafrente son iguales solo
-// se carga el frente; si no, se nombran las caras: frente, contrafrente y laterales.
+// Título de cada paño de fachada.
+// Sí (lados iguales): se ingresa un frente y un lateral, cada uno cuenta ×2
+//   (frente=contrafrente, lateral=lateral opuesto).
+// No: se nombran todas las caras y se cargan manualmente.
 function panoLabel(a, i, total){
-  if(a.frenteIgual) return total > 1 ? `Frente · ${i+1}` : 'Frente';
+  if(a.frenteIgual){
+    if(i === 0) return 'Frente';
+    return total > 2 ? `Lateral ${i}` : 'Lateral';
+  }
   if(i === 0) return 'Frente';
   if(i === 1) return 'Contrafrente';
   return `Lateral ${i-1}`;
@@ -593,8 +598,8 @@ function renderAmbientes() {
           <button class="tg-btn ${a.frenteIgual?'on':''}" style="padding:4px 8px;font-size:10px" onclick="ambChange(${a.id},'frenteIgual',true);renderAmbientes()">Sí</button>
         </div>
       </div>
-      ${a.frenteIgual?`<div style="font-size:10px;color:var(--accent);margin-bottom:8px;letter-spacing:.2px">Cargás solo el frente · se multiplica ×2 (frente + contrafrente).</div>`:`<div style="font-size:10px;color:var(--text-tertiary);margin-bottom:8px;letter-spacing:.2px">Cargá cada cara como un paño por separado.</div>`}
-      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Paños de fachada${a.frenteIgual?' (frente)':''}</div>
+      ${a.frenteIgual?`<div style="font-size:10px;color:var(--accent);margin-bottom:8px;letter-spacing:.2px">Lados iguales · ingresás el frente y el lateral una vez y cada uno se multiplica ×2.</div>`:`<div style="font-size:10px;color:var(--text-tertiary);margin-bottom:8px;letter-spacing:.2px">Cargá cada cara como un paño por separado.</div>`}
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Paños de fachada${a.frenteIgual?' (lados iguales)':''}</div>
       ${(a.panos||[]).map((p,i,arr)=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
         <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${panoLabel(a,i,arr.length)}</div>
         <div class="row2" style="margin-bottom:8px">
