@@ -1317,7 +1317,7 @@ async function cargarUOCRA(){
       if(ce)ce.textContent=`Valor/hora: ${fmtm(r.hora)} · Jornada: ${fmtm(r.hora*8)}`;
     });
     const vig=data.vigencia||'—';
-    const fte=data.fuente==='manual'?'valores manuales de respaldo':'uocra.net';
+    const fte=data.fuente==='manual'?'valores manuales de respaldo':'CAMARCO';
     if(info)info.textContent=`✓ Vigencia ${vig} · Fuente: ${fte}`;
     calc();
   }catch(e){

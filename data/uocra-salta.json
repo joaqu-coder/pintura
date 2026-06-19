@@ -2,11 +2,11 @@
   "fuente": "manual",
   "zona": "A",
   "provincia": "Salta",
-  "vigencia": "2024-10",
+  "vigencia": "2026-06",
   "roles": [
-    { "id": "es", "label": "Oficial Especializado", "hora": 2850 },
-    { "id": "of", "label": "Oficial",               "hora": 2580 },
-    { "id": "mo", "label": "Medio Oficial",         "hora": 2250 },
-    { "id": "ay", "label": "Ayudante",              "hora": 1980 }
+    { "id": "es", "label": "Oficial Especializado", "hora": 6666 },
+    { "id": "of", "label": "Oficial",               "hora": 5703 },
+    { "id": "mo", "label": "Medio Oficial",         "hora": 5270 },
+    { "id": "ay", "label": "Ayudante",              "hora": 4851 }
   ]
 }
