@@ -57,6 +57,14 @@ function getVanosTotal(vanos){
 function fachadaFactor(a){
   return (a.tipo === 'Fachadas / muros exteriores' && a.frenteIgual) ? 2 : 1;
 }
+// Título de cada paño de fachada. Si frente y contrafrente son iguales solo
+// se carga el frente; si no, se nombran las caras: frente, contrafrente y laterales.
+function panoLabel(a, i, total){
+  if(a.frenteIgual) return total > 1 ? `Frente · ${i+1}` : 'Frente';
+  if(i === 0) return 'Frente';
+  if(i === 1) return 'Contrafrente';
+  return `Lateral ${i-1}`;
+}
 function calcAmbMuroBruto(a){
   const isFachada = a.tipo === 'Fachadas / muros exteriores';
   if(isFachada){
@@ -587,7 +595,8 @@ function renderAmbientes() {
       </div>
       ${a.frenteIgual?`<div style="font-size:10px;color:var(--accent);margin-bottom:8px;letter-spacing:.2px">Cargás solo el frente · se multiplica ×2 (frente + contrafrente).</div>`:`<div style="font-size:10px;color:var(--text-tertiary);margin-bottom:8px;letter-spacing:.2px">Cargá cada cara como un paño por separado.</div>`}
       <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Paños de fachada${a.frenteIgual?' (frente)':''}</div>
-      ${(a.panos||[]).map(p=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
+      ${(a.panos||[]).map((p,i,arr)=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${panoLabel(a,i,arr.length)}</div>
         <div class="row2" style="margin-bottom:8px">
           <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" inputmode="decimal" value="${p.ancho||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'ancho',this.value)"></div>
           <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${p.alto||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'alto',this.value)"></div>
