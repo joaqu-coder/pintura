@@ -52,12 +52,18 @@ function normalizeVanos(vanos){
 function getVanosTotal(vanos){
   return normalizeVanos(vanos).reduce((acc,v)=>acc+((parseFloat(v.ancho)||0)*(parseFloat(v.alto)||0)*(parseFloat(v.cantidad)||0)),0);
 }
+// Fachada con "frente y contrafrente iguales": se carga solo el frente
+// y se multiplica ×2. Para cualquier otro ambiente el factor es 1.
+function fachadaFactor(a){
+  return (a.tipo === 'Fachadas / muros exteriores' && a.frenteIgual) ? 2 : 1;
+}
 function calcAmbMuroBruto(a){
   const isFachada = a.tipo === 'Fachadas / muros exteriores';
   if(isFachada){
+    const factor = fachadaFactor(a);
     if(a.panos && a.panos.length > 0)
-      return a.panos.reduce((s,p)=>s+(p.ancho||0)*(p.alto||0),0);
-    return (a.ml||0)*(a.alt||0); // compat historial sin panos
+      return a.panos.reduce((s,p)=>s+(p.ancho||0)*(p.alto||0),0)*factor;
+    return (a.ml||0)*(a.alt||0)*factor; // compat historial sin panos
   }
   return a.ml*a.alt*a.paredes;
 }
@@ -66,7 +72,7 @@ function calcAmbCielo(a){
   const lc = a.largoCielo !== undefined ? a.largoCielo : a.ml;
   return isFachada ? 0 : lc*a.anchoCielo;
 }
-function calcAmbVanos(a){ return getVanosTotal(a.vanos); }
+function calcAmbVanos(a){ return getVanosTotal(a.vanos) * fachadaFactor(a); }
 function calcAmbMuroNeto(a){ return Math.max(0, calcAmbMuroBruto(a)-calcAmbVanos(a)); }
 function calcAmbZocalo(a){ return (a.conZocalo&&a.zocLargo&&a.zocAlto) ? (a.zocLargo*a.zocAlto) : 0; }
 function calcAmbBaranda(a){ return (a.conBaranda&&a.barLargo&&a.barAlto) ? (a.barLargo*a.barAlto) : 0; }
@@ -515,6 +521,7 @@ function addAmbiente(tipo) {
     id:nid(), tipo, ml:0, largoCielo:0, alt:2.70,
     paredes:isFachada?1:4, anchoCielo:0, vanos:[],
     panos: isFachada ? [{id:nid(), ancho:0, alto:2.70}] : [],
+    frenteIgual: false,
     conZocalo:false, zocLargo:0, zocAlto:0.15, zocMaterial:'Madera',
     conBaranda:false, barLargo:0, barAlto:1.0, barMaterial:'Metálica'
   });
@@ -535,7 +542,7 @@ function panoChange(ambId,panoId,key,val){
   const p=a.panos.find(p=>p.id===panoId);if(!p)return;
   p[key]=parseFloat(String(val).replace(',','.'))||0;
   const sub=document.getElementById(`pano-sub-${a.id}-${p.id}`);
-  if(sub)sub.textContent=fm2((p.ancho||0)*(p.alto||0));
+  if(sub)sub.textContent=fm2((p.ancho||0)*(p.alto||0)*fachadaFactor(a));
   calcAmb(a.id);calc();
 }
 function addAmbVano(ambId){
@@ -566,7 +573,7 @@ function toggleAmbiente(id){
 }
 function ambChange(id,key,val) {
   const a=ambientes.find(a=>a.id===id); if(!a)return;
-  const bools=['conZocalo','conBaranda'];
+  const bools=['conZocalo','conBaranda','frenteIgual'];
   const strs=['tipo','zocMaterial','barMaterial'];
   if(bools.includes(key)) a[key]=val;
   else if(strs.includes(key)) a[key]=val;
@@ -600,14 +607,22 @@ function renderAmbientes() {
 
     const bodyHtml = a.abierto ? `
       ${isFachada ? `
-      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px">Paños de fachada</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;margin-top:10px;gap:10px">
+        <span style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px">¿Frente y contrafrente iguales?</span>
+        <div class="tg-group" style="width:120px;margin:0">
+          <button class="tg-btn ${!a.frenteIgual?'on':''}" style="padding:4px 8px;font-size:10px" onclick="ambChange(${a.id},'frenteIgual',false);renderAmbientes()">No</button>
+          <button class="tg-btn ${a.frenteIgual?'on':''}" style="padding:4px 8px;font-size:10px" onclick="ambChange(${a.id},'frenteIgual',true);renderAmbientes()">Sí</button>
+        </div>
+      </div>
+      ${a.frenteIgual?`<div style="font-size:10px;color:var(--accent);margin-bottom:8px;letter-spacing:.2px">Cargás solo el frente · se multiplica ×2 (frente + contrafrente).</div>`:`<div style="font-size:10px;color:var(--text-tertiary);margin-bottom:8px;letter-spacing:.2px">Cargá cada cara como un paño por separado.</div>`}
+      <div style="font-size:9px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Paños de fachada${a.frenteIgual?' (frente)':''}</div>
       ${(a.panos||[]).map(p=>`<div class="amb-block" style="padding:10px;margin-bottom:8px">
         <div class="row2" style="margin-bottom:8px">
           <div class="fg" style="margin-bottom:0"><label>Ancho (m)</label><input type="number" inputmode="decimal" value="${p.ancho||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'ancho',this.value)"></div>
           <div class="fg" style="margin-bottom:0"><label>Alto (m)</label><input type="number" inputmode="decimal" value="${p.alto||0}" min="0" step="0.01" oninput="panoChange(${a.id},${p.id},'alto',this.value)"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <span style="font-size:10px;color:var(--text-tertiary)">Paño: <span id="pano-sub-${a.id}-${p.id}">${fm2((p.ancho||0)*(p.alto||0))}</span></span>
+          <span style="font-size:10px;color:var(--text-tertiary)">Paño${a.frenteIgual?' ×2':''}: <span id="pano-sub-${a.id}-${p.id}">${fm2((p.ancho||0)*(p.alto||0)*(a.frenteIgual?2:1))}</span></span>
           <button class="btn-rm" onclick="removePano(${a.id},${p.id})" ${(a.panos||[]).length<=1?'style="visibility:hidden"':''}>×</button>
         </div>
       </div>`).join('')}
