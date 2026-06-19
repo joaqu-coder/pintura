@@ -11,7 +11,7 @@
 //
 // Para forzar un refresco limpio en una nueva versión, subir el número de CACHE.
 
-const CACHE = 'antigravity-v1750267200000'; // auto-bumpeado por dev.js — no editar a mano
+const CACHE = 'antigravity-v1781871232729'; // auto-bumpeado por dev.js — no editar a mano
 const ASSETS = [
   './',
   './index.html',
