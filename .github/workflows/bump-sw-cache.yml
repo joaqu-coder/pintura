@@ -1,0 +1,41 @@
+name: Bump SW cache al deployar
+
+# Se dispara solo cuando cambian archivos de la app (no cuando cambia sw.js solo,
+# para evitar un loop infinito).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app.legacy.js'
+      - 'app.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'manifest.json'
+      - 'data/**'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-sw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bumpar CACHE en sw.js
+        run: |
+          TIMESTAMP=$(date +%s%3N)
+          sed -i "s/const CACHE = 'antigravity-v[^']*';/const CACHE = 'antigravity-v${TIMESTAMP}';/" sw.js
+          echo "Cache bumpeado → antigravity-v${TIMESTAMP}"
+
+      - name: Commit y push si hubo cambios
+        run: |
+          git config user.name  "sw-bump-bot"
+          git config user.email "bot@antigravity.local"
+          git diff --quiet sw.js || (
+            git add sw.js &&
+            git commit -m "[sw-bump] Actualizar cache SW → detectar versión nueva en dispositivos" &&
+            git push
+          )
