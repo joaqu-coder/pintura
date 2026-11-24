@@ -2,7 +2,7 @@
 
 import { Bus } from './core/bus.js';
 import { CLAVE_STORAGE, crearRepositorio } from './almacenamiento/repositorio.js';
-import { obtenerContextoClima } from './servicios/clima.js';
+import { obtenerContextoUbicacion } from './servicios/ubicacion.js';
 import { EVENTO_CAMBIO, RegistroService } from './servicios/registro.js';
 import { iniciarRouter } from './router.js';
 import { vistaRegistro } from './paginas/registro.js';
@@ -22,7 +22,7 @@ function iniciar() {
   const servicio = new RegistroService({
     repositorio,
     bus,
-    obtenerContexto: () => obtenerContextoClima(),
+    obtenerContexto: () => obtenerContextoUbicacion(),
   });
   const deps = { servicio, bus };
 

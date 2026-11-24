@@ -8,8 +8,6 @@ import { EVENTO_CAMBIO } from '../servicios/registro.js';
 import { h } from '../ui/dom.js';
 import { donut } from '../ui/graficos.js';
 
-const formatoTemp = (v) => v.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
 export function vistaDashboard({ servicio, bus }) {
   let periodo = 'todo';
   let eventos = [];
@@ -64,35 +62,18 @@ export function vistaDashboard({ servicio, bus }) {
 
       h(
         'div',
-        { class: 'grid-2' },
-        h(
-          'div',
-          { class: 'tarjeta' },
-          h('p', { class: 'etiqueta' }, 'Último evento'),
-          r.ultimo
-            ? h(
-                'div',
-                { class: 'ultimo' },
-                h('span', { class: 'ultimo-icono', 'aria-hidden': 'true' }, TIPOS[r.ultimo.tipo].icono),
-                h('p', { class: 'valor-principal' }, TIPOS[r.ultimo.tipo].nombre),
-                h('p', { class: 'nota' }, `${formatearFecha(r.ultimo.fecha)}`),
-                h('p', { class: 'nota' }, `${formatearHoraCorta(r.ultimo.hora)} h`),
-              )
-            : h('p', { class: 'nota' }, 'Sin registros en este período'),
-        ),
-        h(
-          'div',
-          { class: 'tarjeta' },
-          h('p', { class: 'etiqueta' }, 'Temperatura promedio'),
-          r.temperaturaPromedio !== null
-            ? h(
-                'div',
-                {},
-                h('p', { class: 'valor-principal' }, `${formatoTemp(r.temperaturaPromedio)} °C`),
-                h('p', { class: 'nota' }, `De ${r.conTemperatura} ${r.conTemperatura === 1 ? 'registro' : 'registros'} con temperatura`),
-              )
-            : h('p', { class: 'nota' }, r.total > 0 ? 'Sin temperaturas registradas' : 'Sin datos todavía'),
-        ),
+        { class: 'tarjeta' },
+        h('p', { class: 'etiqueta' }, 'Último evento'),
+        r.ultimo
+          ? h(
+              'div',
+              { class: 'ultimo' },
+              h('span', { class: 'ultimo-icono', 'aria-hidden': 'true' }, TIPOS[r.ultimo.tipo].icono),
+              h('p', { class: 'valor-principal' }, TIPOS[r.ultimo.tipo].nombre),
+              h('p', { class: 'nota' }, `${formatearFecha(r.ultimo.fecha)}`),
+              h('p', { class: 'nota' }, `${formatearHoraCorta(r.ultimo.hora)} h`),
+            )
+          : h('p', { class: 'nota' }, 'Sin registros en este período'),
       ),
 
       h(

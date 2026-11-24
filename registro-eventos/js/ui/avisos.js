@@ -19,7 +19,7 @@ export function ocultarAviso() {
 /**
  * @param {object} opciones
  * @param {string} opciones.titulo
- * @param {Array<[string, string]>} [opciones.filas] pares etiqueta/valor (fecha, hora, temperatura...)
+ * @param {Array<[string, string]>} [opciones.filas] pares etiqueta/valor (fecha, hora, ubicación...)
  * @param {'ok'|'error'|'info'|'progreso'} [opciones.tipo='ok']
  * @param {number} [opciones.duracion=3500] ms; 0 = queda visible hasta reemplazarlo
  * @param {string} [opciones.detalle]

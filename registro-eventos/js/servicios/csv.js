@@ -5,7 +5,6 @@ export const COLUMNAS_CSV = Object.freeze([
   'tipo',
   'fecha',
   'hora',
-  'temperatura_c',
   'latitud',
   'longitud',
   'creado_en',
@@ -20,7 +19,7 @@ function celda(valor) {
 /** Convierte una lista de eventos en texto CSV. Los valores vacíos quedan en blanco. */
 export function aCSV(eventos) {
   const filas = eventos.map((e) =>
-    [e.id, e.tipo, e.fecha, e.hora, e.temperatura, e.ubicacion?.lat, e.ubicacion?.lon, e.creadoEn]
+    [e.id, e.tipo, e.fecha, e.hora, e.ubicacion?.lat, e.ubicacion?.lon, e.creadoEn]
       .map(celda)
       .join(','),
   );

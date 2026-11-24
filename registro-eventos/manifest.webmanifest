@@ -1,7 +1,7 @@
 {
   "name": "Registro de eventos",
   "short_name": "Eventos",
-  "description": "Registro rápido de eventos con fecha, hora y temperatura.",
+  "description": "Registro rápido de eventos con fecha y hora.",
   "start_url": "./",
   "scope": "./",
   "id": "./",

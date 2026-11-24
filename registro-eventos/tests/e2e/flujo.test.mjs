@@ -1,6 +1,5 @@
 // Pruebas de extremo a extremo en Chromium (Playwright).
-// Sirven la app con un servidor estático local y simulan la API del clima
-// (la app real consulta api.open-meteo.com desde el celular).
+// Sirven la app con un servidor estático local y simulan la geolocalización.
 //
 // Ejecutar:  node --test registro-eventos/tests/e2e/flujo.test.mjs
 
@@ -20,7 +19,6 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const CAPTURAS = process.env.CAPTURAS_DIR ?? null;
 const CLAVE = 'registro-eventos:v1';
-const CLIMA_URL = 'https://api.open-meteo.com/**';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -35,8 +33,6 @@ const MIME = {
 let servidor;
 let base;
 let navegador;
-let temperaturaSimulada = 21.4;
-let climaFalla = false;
 
 before(async () => {
   servidor = http.createServer((req, res) => {
@@ -73,17 +69,6 @@ async function nuevoContexto({ ubicacion = true, serviceWorkers = 'block' } = {}
     permissions: ubicacion ? ['geolocation'] : [],
     geolocation: { latitude: -31.42008, longitude: -64.18877 },
   });
-  await contexto.route(CLIMA_URL, (ruta) => {
-    if (climaFalla) {
-      ruta.fulfill({ status: 500, headers: { 'access-control-allow-origin': '*' }, body: 'error' });
-      return;
-    }
-    ruta.fulfill({
-      status: 200,
-      headers: { 'access-control-allow-origin': '*', 'content-type': 'application/json' },
-      json: { current: { temperature_2m: temperaturaSimulada } },
-    });
-  });
   return contexto;
 }
 
@@ -104,13 +89,12 @@ const sembrar = async (pagina, registros) => {
   await pagina.reload();
 };
 
-function registro({ id, tipo, fecha, hora, temperatura = null, ubicacion = null }) {
+function registro({ id, tipo, fecha, hora, ubicacion = null }) {
   return {
     id,
     tipo,
     fecha,
     hora,
-    temperatura,
     ubicacion,
     creadoEn: new Date(`${fecha}T${hora}`).toISOString(),
   };
@@ -125,11 +109,11 @@ const HACE_10 = sumarDias(HOY, -10);
 const HACE_40 = sumarDias(HOY, -40);
 
 const DATOS_BASE = [
-  registro({ id: 'r1', tipo: 'corazon', fecha: HACE_40, hora: '08:00:00', temperatura: 10 }),
-  registro({ id: 'r2', tipo: 'cuento', fecha: HACE_10, hora: '07:30:00', temperatura: null }),
-  registro({ id: 'r3', tipo: 'gasolinera', fecha: AYER, hora: '18:10:00', temperatura: 30 }),
-  registro({ id: 'r4', tipo: 'corazon', fecha: HOY, hora: '09:00:00', temperatura: 20 }),
-  registro({ id: 'r5', tipo: 'corazon', fecha: HOY, hora: '11:45:30', temperatura: 24.5 }),
+  registro({ id: 'r1', tipo: 'corazon', fecha: HACE_40, hora: '08:00:00' }),
+  registro({ id: 'r2', tipo: 'cuento', fecha: HACE_10, hora: '07:30:00' }),
+  registro({ id: 'r3', tipo: 'gasolinera', fecha: AYER, hora: '18:10:00' }),
+  registro({ id: 'r4', tipo: 'corazon', fecha: HOY, hora: '09:00:00' }),
+  registro({ id: 'r5', tipo: 'corazon', fecha: HOY, hora: '11:45:30' }),
 ];
 
 // ───────────────── Registro ─────────────────
@@ -148,8 +132,7 @@ test('la pantalla Registro muestra los tres pines y la barra inferior', async ()
   await contexto.close();
 });
 
-test('tocar un pin guarda fecha, hora, temperatura y ubicación, y muestra la confirmación', async () => {
-  temperaturaSimulada = 21.4;
+test('tocar un pin guarda fecha, hora y ubicación, y muestra la confirmación', async () => {
   const contexto = await nuevoContexto();
   const p = await abrir(contexto);
 
@@ -157,19 +140,19 @@ test('tocar un pin guarda fecha, hora, temperatura y ubicación, y muestra la co
   const aviso = p.locator('#capa-avisos .aviso-ok');
   await aviso.waitFor();
   assert.match(await aviso.innerText(), /Corazón registrado/);
-  assert.match(await aviso.innerText(), /21,4 °C/);
+  assert.match(await aviso.innerText(), /Ubicación\s+Guardada/);
+  assert.doesNotMatch(await aviso.innerText(), /Temperatura/);
 
   const datos = await leerRegistros(p);
   assert.equal(datos.length, 1);
   const [r] = datos;
   assert.equal(r.tipo, 'corazon');
-  assert.equal(r.temperatura, 21.4);
   assert.deepEqual(r.ubicacion, { lat: -31.4201, lon: -64.1888 });
   assert.match(r.id, /^[0-9a-f-]{36}$/);
   assert.match(r.hora, /^\d{2}:\d{2}:\d{2}$/);
   assert.equal(r.fecha, HOY, 'fecha local del dispositivo');
   assert.ok(!Number.isNaN(Date.parse(r.creadoEn)));
-  assert.deepEqual(Object.keys(r).sort(), ['creadoEn', 'fecha', 'hora', 'id', 'temperatura', 'tipo', 'ubicacion']);
+  assert.deepEqual(Object.keys(r).sort(), ['creadoEn', 'fecha', 'hora', 'id', 'tipo', 'ubicacion']);
   assert.deepEqual(p.errores, []);
   await contexto.close();
 });
@@ -190,7 +173,7 @@ test('un toque accidental doble registra una sola vez', async () => {
   await contexto.close();
 });
 
-test('sin permiso de ubicación se guarda igual, sin temperatura, indicándolo', async () => {
+test('sin permiso de ubicación se guarda igual, sin ubicación, indicándolo', async () => {
   const contexto = await nuevoContexto({ ubicacion: false });
   const p = await abrir(contexto);
   // Simula el rechazo del permiso de ubicación del sistema.
@@ -205,26 +188,8 @@ test('sin permiso de ubicación se guarda igual, sin temperatura, indicándolo',
 
   const [r] = await leerRegistros(p);
   assert.equal(r.tipo, 'cuento');
-  assert.equal(r.temperatura, null);
   assert.equal(r.ubicacion, null);
   await contexto.close();
-});
-
-test('si el servicio del clima falla, el registro se guarda sin inventar temperatura', async () => {
-  climaFalla = true;
-  try {
-    const contexto = await nuevoContexto();
-    const p = await abrir(contexto);
-    await p.getByRole('button', { name: 'Registrar corazón' }).click();
-    await p.locator('#capa-avisos .aviso-ok').waitFor();
-
-    const [r] = await leerRegistros(p);
-    assert.equal(r.temperatura, null);
-    assert.ok(r.ubicacion, 'la ubicación sí se obtuvo y se conserva');
-    await contexto.close();
-  } finally {
-    climaFalla = false;
-  }
 });
 
 test('el registro persiste al cerrar y reabrir la app', async () => {
@@ -242,7 +207,7 @@ test('el registro persiste al cerrar y reabrir la app', async () => {
 
 // ───────────────── Dashboard ─────────────────
 
-test('el Dashboard muestra total, categorías, último evento y temperatura promedio', async () => {
+test('el Dashboard muestra total, categorías y último evento', async () => {
   const contexto = await nuevoContexto();
   const p = await abrir(contexto);
   await sembrar(p, DATOS_BASE);
@@ -257,12 +222,10 @@ test('el Dashboard muestra total, categorías, último evento y temperatura prom
   assert.match(leyenda[2], /Cuento\s+1 · 20%/);
 
   // Último evento: el de hoy a las 11:45 (Corazón)
-  const ultimo = await p.locator('.pagina-dashboard .grid-2 .tarjeta').first().innerText();
+  const ultimo = await p.locator('.pagina-dashboard .ultimo').innerText();
   assert.match(ultimo, /Corazón/);
   assert.match(ultimo, /11:45/);
-
-  // Promedio de 4 temperaturas: (10 + 30 + 20 + 24.5) / 4 = 21.1 (cuento sin temperatura se excluye)
-  assert.match(await p.locator('.pagina-dashboard .grid-2 .tarjeta').nth(1).innerText(), /21,1 °C/);
+  assert.equal(await p.locator('.pagina-dashboard').getByText(/temperatura/i).count(), 0);
   assert.deepEqual(p.errores, []);
   await contexto.close();
 });
@@ -312,7 +275,7 @@ test('el Dashboard sin registros muestra un estado vacío', async () => {
 
 // ───────────────── Historial ─────────────────
 
-test('el Historial lista del más reciente al más antiguo con icono, fecha, hora y temperatura', async () => {
+test('el Historial lista del más reciente al más antiguo con icono, fecha y hora', async () => {
   const contexto = await nuevoContexto();
   const p = await abrir(contexto);
   await sembrar(p, DATOS_BASE);
@@ -325,8 +288,7 @@ test('el Historial lista del más reciente al más antiguo con icono, fecha, hor
   const primera = await p.locator('.evento').first().innerText();
   assert.match(primera, /Corazón/);
   assert.match(primera, /11:45/);
-  assert.match(primera, /24,5 °C/);
-  assert.match(await p.locator('.evento').nth(3).innerText(), /Sin temperatura/);
+  assert.doesNotMatch(primera, /°C/);
   await contexto.close();
 });
 
@@ -389,7 +351,7 @@ test('exportar CSV descarga un archivo con encabezado y los registros filtrados'
   assert.equal(descarga.suggestedFilename(), `registro-eventos-${HOY}.csv`);
   const texto = fs.readFileSync(await descarga.path(), 'utf8');
   const lineas = texto.replace(/^﻿/, '').trimEnd().split('\r\n');
-  assert.equal(lineas[0], 'id,tipo,fecha,hora,temperatura_c,latitud,longitud,creado_en');
+  assert.equal(lineas[0], 'id,tipo,fecha,hora,latitud,longitud,creado_en');
   assert.equal(lineas.length, 4, 'encabezado + 3 corazones');
   assert.ok(lineas.every((l) => l.includes('corazon') || l.startsWith('id,')));
   await contexto.close();

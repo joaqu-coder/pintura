@@ -6,7 +6,6 @@
 //   tipo:        "corazon" | "gasolinera" | "cuento",
 //   fecha:       "YYYY-MM-DD" (día local),
 //   hora:        "HH:MM:SS"   (hora local exacta),
-//   temperatura: número en °C | null,
 //   ubicacion:   { lat, lon } | null,
 //   creadoEn:    ISO 8601 (UTC)
 // }
@@ -22,10 +21,6 @@ export const TIPOS = Object.freeze({
 });
 
 export const CLAVES_TIPO = Object.freeze(Object.keys(TIPOS));
-
-// Rango físico razonable para una temperatura ambiente (°C).
-export const TEMPERATURA_MIN = -90;
-export const TEMPERATURA_MAX = 60;
 
 export function esTipoValido(tipo) {
   return CLAVES_TIPO.includes(tipo);
@@ -52,17 +47,6 @@ export function validarEvento(evento) {
     problemas.push('hora inválida');
   }
 
-  const temperatura = evento.temperatura;
-  const temperaturaOk =
-    temperatura === null ||
-    (typeof temperatura === 'number' &&
-      Number.isFinite(temperatura) &&
-      temperatura >= TEMPERATURA_MIN &&
-      temperatura <= TEMPERATURA_MAX);
-  if (!temperaturaOk) {
-    problemas.push('temperatura inválida');
-  }
-
   const ubicacion = evento.ubicacion ?? null;
   if (ubicacion !== null) {
     const latOk = Number.isFinite(ubicacion.lat) && ubicacion.lat >= -90 && ubicacion.lat <= 90;
@@ -86,7 +70,6 @@ export function validarEvento(evento) {
 export function crearEvento({
   tipo,
   ahora = new Date(),
-  temperatura = null,
   ubicacion = null,
   id = generarId(),
 }) {
@@ -99,7 +82,6 @@ export function crearEvento({
     tipo,
     fecha: fechaLocal(ahora),
     hora: horaLocal(ahora),
-    temperatura,
     ubicacion,
     creadoEn: ahora.toISOString(),
   };

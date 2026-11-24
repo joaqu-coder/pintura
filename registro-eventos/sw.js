@@ -46,7 +46,7 @@ self.addEventListener('fetch', (evento) => {
   const req = evento.request;
   const url = new URL(req.url);
 
-  // Solo GET del mismo origen. La API del clima pasa directo a la red.
+  // Solo GET del mismo origen.
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
   evento.respondWith(

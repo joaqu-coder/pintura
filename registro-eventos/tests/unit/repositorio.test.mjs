@@ -39,7 +39,7 @@ class FakeStorage {
 }
 
 const nuevo = (tipo = 'corazon', id) =>
-  crearEvento({ tipo, ahora: new Date(2026, 10, 24, 10, 0, 0), temperatura: 20, ubicacion: null, id });
+  crearEvento({ tipo, ahora: new Date(2026, 10, 24, 10, 0, 0), ubicacion: null, id });
 
 test('listar devuelve [] cuando no hay datos guardados', async () => {
   const repo = new LocalStorageRepositorio({ storage: new FakeStorage() });

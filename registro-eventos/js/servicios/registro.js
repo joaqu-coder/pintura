@@ -61,7 +61,7 @@ export class RegistroService {
       return { estado: ESTADOS.DUPLICADO };
     }
 
-    // La hora del evento es la del toque, aunque la temperatura tarde en llegar.
+    // La hora del evento es la del toque, aunque la ubicación tarde en llegar.
     const ahora = new Date(this.#reloj());
     this.#enCurso.add(tipo);
     try {
@@ -69,7 +69,6 @@ export class RegistroService {
       const evento = crearEvento({
         tipo,
         ahora,
-        temperatura: contexto.temperatura,
         ubicacion: contexto.ubicacion,
       });
       await this.#repositorio.guardar(evento);
@@ -99,13 +98,12 @@ export class RegistroService {
     try {
       const contexto = await this.#obtenerContexto();
       return {
-        temperatura: contexto?.temperatura ?? null,
         ubicacion: contexto?.ubicacion ?? null,
         motivo: contexto?.motivo ?? null,
       };
     } catch (error) {
-      console.error('[registro] error al capturar contexto', error);
-      return { temperatura: null, ubicacion: null, motivo: 'error_inesperado' };
+      console.error('[registro] error al capturar la ubicación', error);
+      return { ubicacion: null, motivo: 'error_inesperado' };
     }
   }
 }

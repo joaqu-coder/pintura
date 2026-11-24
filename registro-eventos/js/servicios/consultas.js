@@ -27,32 +27,17 @@ export function filtrarHistorial(eventos, { tipo = 'todos', fecha = '' } = {}) {
   );
 }
 
-/**
- * Indicadores del Dashboard.
- * La temperatura promedio solo considera registros que sí tienen temperatura.
- */
+/** Indicadores del Dashboard: total, conteo por tipo y último evento. */
 export function resumir(eventos) {
   const porTipo = Object.fromEntries(CLAVES_TIPO.map((clave) => [clave, 0]));
-  let suma = 0;
-  let conTemperatura = 0;
   let ultimo = null;
 
   for (const evento of eventos) {
     porTipo[evento.tipo] += 1;
-    if (evento.temperatura !== null) {
-      suma += evento.temperatura;
-      conTemperatura += 1;
-    }
     if (ultimo === null || marca(evento) > marca(ultimo)) {
       ultimo = evento;
     }
   }
 
-  return {
-    total: eventos.length,
-    porTipo,
-    ultimo,
-    conTemperatura,
-    temperaturaPromedio: conTemperatura > 0 ? Math.round((suma / conTemperatura) * 10) / 10 : null,
-  };
+  return { total: eventos.length, porTipo, ultimo };
 }

@@ -2,7 +2,7 @@
 
 import { CLAVES_TIPO, TIPOS } from '../modelo/eventos.js';
 import { ESTADOS } from '../servicios/registro.js';
-import { MOTIVOS_TEXTO } from '../servicios/clima.js';
+import { MOTIVOS_TEXTO } from '../servicios/ubicacion.js';
 import { formatearFecha, formatearHoraCorta, fechaLocal } from '../core/fecha.js';
 import { h } from '../ui/dom.js';
 import { mostrarAviso } from '../ui/avisos.js';
@@ -31,7 +31,7 @@ export function vistaRegistro({ servicio }) {
     vibrar(18);
     pin.classList.add('pulsando');
     pin.setAttribute('aria-busy', 'true');
-    mostrarAviso({ titulo: `Guardando ${tipo.nombre.toLowerCase()}…`, detalle: 'Obteniendo temperatura', tipo: 'progreso', duracion: 0 });
+    mostrarAviso({ titulo: `Guardando ${tipo.nombre.toLowerCase()}…`, detalle: 'Obteniendo ubicación', tipo: 'progreso', duracion: 0 });
 
     let resultado;
     try {
@@ -95,7 +95,7 @@ export function vistaRegistro({ servicio }) {
     h(
       'p',
       { class: 'ayuda' },
-      'Se guarda al instante con fecha, hora y temperatura. La ubicación se pide solo al registrar.',
+      'Se guarda al instante con fecha y hora. La ubicación se pide solo al registrar.',
     ),
   );
 
@@ -119,10 +119,10 @@ function confirmarVisualmente(pin) {
 
 function mostrarConfirmacion(evento, motivo) {
   const tipo = TIPOS[evento.tipo];
-  const temperatura =
-    evento.temperatura === null
+  const ubicacion =
+    evento.ubicacion === null
       ? `No disponible${motivo ? ` · ${MOTIVOS_TEXTO[motivo] ?? 'sin datos'}` : ''}`
-      : `${evento.temperatura.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`;
+      : 'Guardada';
 
   mostrarAviso({
     titulo: `${tipo.nombre} registrado`,
@@ -131,7 +131,7 @@ function mostrarConfirmacion(evento, motivo) {
     filas: [
       ['Fecha', formatearFecha(evento.fecha)],
       ['Hora', formatearHoraCorta(evento.hora)],
-      ['Temperatura', temperatura],
+      ['Ubicación', ubicacion],
     ],
   });
 }

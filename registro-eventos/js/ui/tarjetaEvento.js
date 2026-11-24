@@ -7,10 +7,6 @@ import { ICONOS } from './iconos.js';
 
 export function tarjetaEvento(evento, { onEliminar }) {
   const tipo = TIPOS[evento.tipo];
-  const temperatura =
-    evento.temperatura === null
-      ? h('span', { class: 'evento-temp evento-temp-vacia' }, 'Sin temperatura')
-      : h('span', { class: 'evento-temp' }, `${evento.temperatura.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`);
 
   return h(
     'article',
@@ -22,7 +18,6 @@ export function tarjetaEvento(evento, { onEliminar }) {
       h('p', { class: 'evento-nombre' }, tipo.nombre),
       h('p', { class: 'evento-meta' }, `${formatearFecha(evento.fecha)} · ${formatearHoraCorta(evento.hora)}`),
     ),
-    temperatura,
     h(
       'button',
       {

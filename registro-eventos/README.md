@@ -1,12 +1,11 @@
 # Registro de eventos
 
 PWA mobile first para registrar eventos con un solo toque. Cada registro guarda
-tipo, fecha, hora exacta, temperatura ambiente (°C), ubicación (opcional) y un
-identificador único.
+tipo, fecha, hora exacta, ubicación (opcional) y un identificador único.
 
 - **Registro:** tres pines (❤️ Corazón, ⛽ Gasolinera, 🪙 Cuento).
-- **Dashboard:** total, conteo por categoría, último evento, temperatura promedio,
-  distribución en gráfico y filtro por Hoy / 7 días / 30 días / Todo.
+- **Dashboard:** total, conteo por categoría, último evento, distribución en
+  gráfico y filtro por Hoy / 7 días / 30 días / Todo.
 - **Historial:** lista del más reciente al más antiguo, filtro por categoría,
   búsqueda por fecha, eliminación con confirmación y exportación a CSV.
 
@@ -28,13 +27,11 @@ Y abrir `http://localhost:3000/registro-eventos/`.
 En el celular, al abrirla desde HTTPS, usar **Agregar a pantalla de inicio**
 (Android / iOS) para instalarla.
 
-## Permisos y temperatura
+## Permisos y ubicación
 
 - La ubicación **se pide solo al tocar un pin**, no al abrir la app.
-- La temperatura viene de [Open-Meteo](https://open-meteo.com/) (gratuito, sin
-  API key) usando `current=temperature_2m` para la ubicación del dispositivo.
-- Si no hay permiso, conexión o respuesta válida, el registro se guarda igual con
-  `temperatura: null` y la confirmación indica el motivo. **Nunca se inventan valores.**
+- Si no hay permiso o no se obtiene a tiempo, el registro se guarda igual sin
+  ubicación (`ubicacion: null`) y la confirmación indica el motivo.
 
 ## Pruebas
 
@@ -43,7 +40,7 @@ node --test registro-eventos/tests/unit/*.test.mjs          # lógica pura (sin 
 node --test --test-timeout=60000 registro-eventos/tests/e2e/flujo.test.mjs   # Chromium con Playwright
 ```
 
-Las pruebas de navegador levantan un servidor local y simulan la API del clima,
+Las pruebas de navegador levantan un servidor local y simulan la geolocalización,
 así que no necesitan internet. Para guardar capturas de cada pantalla:
 `CAPTURAS_DIR=/ruta node --test registro-eventos/tests/e2e/flujo.test.mjs`.
 
@@ -63,7 +60,7 @@ js/
   modelo/eventos.js        Tipos, creación y validación de registros
   almacenamiento/          Contrato RepositorioEventos + localStorage + respaldo en memoria
   servicios/
-    clima.js               Ubicación + temperatura (nunca lanza, devuelve motivo)
+    ubicacion.js           Ubicación opcional (nunca lanza, devuelve motivo)
     registro.js            Orquesta captura, validación, guardado y anti-duplicados
     consultas.js           Filtros, orden y resúmenes (funciones puras)
     csv.js                 Exportación RFC 4180
@@ -82,7 +79,6 @@ el repositorio; nada de la lógica vive en el DOM.
   "tipo": "corazon",
   "fecha": "2026-11-24",
   "hora": "14:32:05",
-  "temperatura": 21.4,
   "ubicacion": { "lat": -31.4201, "lon": -64.1888 },
   "creadoEn": "2026-11-24T17:32:05.000Z"
 }
@@ -90,7 +86,8 @@ el repositorio; nada de la lógica vive en el DOM.
 
 - `fecha` y `hora` son la hora **local del dispositivo** en el momento del toque.
 - `creadoEn` es un timestamp absoluto (UTC) para ordenar.
-- `temperatura` y `ubicacion` pueden ser `null`.
+- `ubicacion` puede ser `null`. Los registros guardados antes de este cambio
+  conservan su campo `temperatura`, que ya no se muestra ni se exporta.
 
 ### Persistencia y futura base en la nube
 
