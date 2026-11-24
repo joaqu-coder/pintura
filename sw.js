@@ -32,10 +32,12 @@ self.addEventListener('install', function (event) {
 
 self.addEventListener('activate', function (event) {
   event.waitUntil((async function () {
-    // Borra cachés de versiones anteriores (incluida la PWA vieja).
+    // Borra cachés de versiones anteriores de ESTA app (incluida la PWA vieja).
+    // Solo prefijo "antigravity-": no tocar los cachés de otras apps del mismo origen
+    // (por ejemplo, registro-eventos/).
     const keys = await caches.keys();
     await Promise.all(
-      keys.filter(function (k) { return k !== CACHE; })
+      keys.filter(function (k) { return k.indexOf('antigravity-') === 0 && k !== CACHE; })
           .map(function (k) { return caches.delete(k); })
     );
     await self.clients.claim();
