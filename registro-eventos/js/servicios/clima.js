@@ -8,7 +8,8 @@
 //  - Servicio: Open-Meteo (gratuito, sin API key).
 
 export const ENDPOINT_CLIMA = 'https://api.open-meteo.com/v1/forecast';
-export const TIMEOUT_UBICACION_MS = 8000;
+// En PC (Windows/Wi-Fi) y en el primer uso la ubicación puede tardar bastante.
+export const TIMEOUT_UBICACION_MS = 20000;
 export const TIMEOUT_CLIMA_MS = 6000;
 
 /** Textos para mostrar al usuario según el motivo por el que no hay temperatura. */
